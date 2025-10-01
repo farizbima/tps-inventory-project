@@ -9,6 +9,7 @@ import io
 import base64
 import os
 import config
+import qrcode
 
 app = Flask(__name__)
 
