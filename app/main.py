@@ -249,5 +249,40 @@ def dashboard():
                            stats=stats, 
                            shortest_lifespan=shortest_lifespan, 
                            most_changes=most_changes)
+
+@app.route('/inventory')
+def inventory():
+    search_query = request.args.get('search_query', '')
+    conn = get_db_connection()
+    if conn is None:
+        return "Koneksi database gagal."
+    
+    cursor = conn.cursor(dictionary=True)
+    
+    params = []
+    # Query ini akan mengelompokkan part berdasarkan part_number, nama, dan vendor,
+    # lalu menghitung berapa banyak yang statusnya 'in_stock'
+    query = """
+        SELECT part_number, part_name, vendor, COUNT(*) as stock_count
+        FROM parts
+        WHERE status = 'in_stock'
+    """
+
+    if search_query:
+        query += " AND (part_name LIKE %s OR part_number LIKE %s)"
+        params.extend([f"%{search_query}%", f"%{search_query}%"])
+
+    query += " GROUP BY part_number, part_name, vendor ORDER BY part_name ASC"
+
+    cursor.execute(query, tuple(params))
+    inventory_data = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('inventory.html', 
+                           inventory_data=inventory_data, 
+                           search_query=search_query)
+
 if __name__ == '__main__':
     app.run(debug=True)

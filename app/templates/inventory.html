@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Cek Inventaris Part{% endblock %}
+
+{% block content %}
+    <h2 class="text-center">Inventaris Part (Stok Tersedia)</h2>
+    <p class="text-center">Daftar part yang berstatus "in_stock" dan siap untuk dipasang.</p>
+
+    <div class="card bg-light my-4">
+        <div class="card-body">
+            <form method="GET" action="/inventory" class="row g-3 align-items-center">
+                <div class="col-md-10">
+                    <input type="text" class="form-control" name="search_query" placeholder="Cari berdasarkan Nama atau Part Number..." value="{{ search_query or '' }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Cari</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <table class="table table-striped table-bordered mt-4">
+        <thead class="table-dark">
+            <tr>
+                <th>Part Number</th>
+                <th>Nama Part</th>
+                <th>Vendor</th>
+                <th class="text-center">Jumlah Stok</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in inventory_data %}
+            <tr>
+                <td>{{ item.part_number }}</td>
+                <td>{{ item.part_name }}</td>
+                <td>{{ item.vendor }}</td>
+                <td class="text-center fs-5 fw-bold">{{ item.stock_count }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center">Tidak ada stok part yang tersedia atau cocok dengan pencarian Anda.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
