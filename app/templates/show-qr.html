@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Cetak QR Code{% endblock %}
+{% block content %}
+    <div class="text-center">
+        <h2>QR Code untuk Part</h2>
+        <p>Gunakan QR Code di bawah ini untuk ditempel pada part.</p>
+        <p><strong>Serial Number:</strong> {{ serial_number }}</p>
+
+        <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR Code" class="img-fluid border my-3" style="max-width: 300px;">
+
+        <div>
+            <button onclick="window.print()" class="btn btn-primary">Cetak Halaman Ini</button>
+            <a href="{{ url_for('inventory') }}" class="btn btn-secondary">Kembali ke Inventaris</a>
+        </div>
+    </div>
+{% endblock %}

@@ -26,6 +26,7 @@
                 <th>Nama Part</th>
                 <th>Vendor</th>
                 <th class="text-center">Jumlah Stok</th>
+                <th class="text-center">Aksi</th>
             </tr>
         </thead>
         <tbody>
@@ -35,10 +36,15 @@
                 <td>{{ item.part_name }}</td>
                 <td>{{ item.vendor }}</td>
                 <td class="text-center fs-5 fw-bold">{{ item.stock_count }}</td>
+                <td class="text-center">
+                    <a href="{{ url_for('inventory_detail', part_number=item.part_number) }}" class="btn btn-info">
+                        Lihat Detail Stok
+                    </a>
+                </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" class="text-center">Tidak ada stok part yang tersedia atau cocok dengan pencarian Anda.</td>
+                <td colspan="5" class="text-center">Tidak ada stok part yang tersedia atau cocok dengan pencarian Anda.</td>
             </tr>
             {% endfor %}
         </tbody>

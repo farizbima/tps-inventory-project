@@ -284,5 +284,40 @@ def inventory():
                            inventory_data=inventory_data, 
                            search_query=search_query)
 
+# Tambahkan route ini di main.py
+
+@app.route('/inventory_detail/<part_number>')
+def inventory_detail(part_number):
+    conn = get_db_connection()
+    if conn is None: return "Koneksi database gagal."
+    cursor = conn.cursor(dictionary=True)
+
+    # Ambil semua part individual yang 'in_stock' untuk part_number tertentu
+    query = "SELECT * FROM parts WHERE part_number = %s AND status = 'in_stock' ORDER BY purchase_date DESC"
+    cursor.execute(query, (part_number,))
+    part_list = cursor.fetchall()
+    
+    # Ambil info umum part (kita ambil dari data pertama karena semuanya sama)
+    part_info = part_list[0] if part_list else {'part_name': 'Tidak Ditemukan', 'part_number': part_number, 'vendor': 'N/A'}
+
+    cursor.close()
+    conn.close()
+
+    return render_template('inventory_detail.html', part_list=part_list, part_info=part_info)
+
+
+@app.route('/qr/<serial_number>')
+def show_qr(serial_number):
+    # Logika pembuatan QR Code
+    import qrcode # Pastikan ini diimpor di atas
+
+    img = qrcode.make(serial_number)
+    buf = io.BytesIO()
+    img.save(buf)
+    buf.seek(0)
+    qr_code_image = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    return render_template('show_qr.html', serial_number=serial_number, qr_code_image=qr_code_image)
+
 if __name__ == '__main__':
     app.run(debug=True)
