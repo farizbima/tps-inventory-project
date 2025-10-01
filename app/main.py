@@ -7,14 +7,17 @@ import time
 from datetime import datetime
 import io
 import base64
+import os
+import config
 
 app = Flask(__name__)
 
+app.secret_key = config.SECRET_KEY
 db_config = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'Awesome998544', # <-- PASTIKAN INI BENAR
-    'database': 'tps_parts_db'
+    'host': config.DB_HOST,
+    'user': config.DB_USER,
+    'password': config.DB_PASSWORD,
+    'database': config.DB_NAME
 }
 
 def get_db_connection():
