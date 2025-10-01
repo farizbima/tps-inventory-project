@@ -1,0 +1,13 @@
+# Folder virtual environment
+venv/
+
+# File konfigurasi rahasia
+.env
+config.py
+
+# Folder cache Python
+__pycache__/
+
+# File-file sistem operasi (opsional tapi bagus)
+.DS_Store
+Thumbs.db
