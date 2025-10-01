@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Part{% endblock %}
+
+{% block content %}
+    <h2 class="text-center">Sistem Tracking Parts</h2>
+    <p class="text-center">Gunakan halaman ini untuk mencatat pemasangan atau pelepasan part.</p>
+    
+    <div id="notification" class="alert d-none" role="alert"></div>
+
+    <div id="scanner-container" class="mb-3 d-none">
+        <div id="qr-reader" style="width:100%;"></div>
+        <button id="stop-scan-btn" class="btn btn-warning mt-2 w-100">Stop Scanning</button>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card p-4">
+                <h4>Pasang Part Baru</h4>
+                <form id="install-form" action="/install" method="POST">
+                    <div class="mb-3">
+                        <label for="serial_number_install" class="form-label">Serial Number Part</label>
+                        <input type="text" class="form-control" id="serial_number_install" name="serial_number" required readonly>
+                    </div>
+                    <button type="button" class="btn btn-primary w-100 mb-3" onclick="startScanner('install')">1. Mulai Scan untuk Pasang</button>
+                    
+                    <div class="mb-3">
+                        <label for="equipment_id" class="form-label">Dipasang pada Equipment</label>
+                        <select class="form-select" id="equipment_id" name="equipment_id" required>
+                            <option value="" disabled selected>-- Pilih Equipment --</option>
+                            {% for eq in equipment_list %}
+                            <option value="{{ eq.id }}">{{ eq.equipment_code }} ({{ eq.equipment_type }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">2. Catat Pemasangan</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card p-4">
+                <h4>Lepas Part</h4>
+                <form id="remove-form" action="/remove" method="POST">
+                    <div class="mb-3">
+                        <label for="serial_number_remove" class="form-label">Serial Number Part</label>
+                        <input type="text" class="form-control" id="serial_number_remove" name="serial_number" required readonly>
+                    </div>
+                    <button type="button" class="btn btn-primary w-100 mb-3" onclick="startScanner('remove')">1. Mulai Scan untuk Lepas</button>
+                    <button type="submit" class="btn btn-danger w-100">2. Catat Pelepasan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        const scannerContainer = document.getElementById('scanner-container');
+        const stopScanBtn = document.getElementById('stop-scan-btn');
+
+        const html5QrcodeScanner = new Html5QrcodeScanner(
+            "qr-reader", 
+            { fps: 10, qrbox: {width: 250, height: 250} },
+            false);
+
+        function showNotification(message, type) {
+            const notificationDiv = document.getElementById('notification');
+            notificationDiv.className = `alert alert-${type}`;
+            notificationDiv.textContent = message;
+            notificationDiv.classList.remove('d-none');
+        }
+
+        function startScanner(mode) {
+            scannerContainer.classList.remove('d-none');
+            
+            const onScanSuccess = (decodedText, decodedResult) => {
+                if (mode === 'install') {
+                    document.getElementById('serial_number_install').value = decodedText;
+                    showNotification(`Part untuk dipasang berhasil dipindai: ${decodedText}!`, 'success');
+                } else if (mode === 'remove') {
+                    document.getElementById('serial_number_remove').value = decodedText;
+                    showNotification(`Part untuk dilepas berhasil dipindai: ${decodedText}!`, 'info');
+                }
+                stopScanner();
+            };
+            html5QrcodeScanner.render(onScanSuccess, () => {});
+        }
+        
+        function stopScanner() {
+            html5QrcodeScanner.stop().then((ignore) => {
+                scannerContainer.classList.add('d-none');
+            }).catch((err) => {
+                console.error("Gagal menghentikan scanner.", err);
+            });
+        }
+
+        stopScanBtn.addEventListener('click', stopScanner);
+    </script>
+{% endblock %}

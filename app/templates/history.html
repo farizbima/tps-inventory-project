@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Riwayat Pemakaian Part{% endblock %}
+
+{% block content %}
+    <h2 class="text-center">Riwayat Pemakaian Part</h2>
+    
+    <div class="card bg-light my-4">
+        <div class="card-body">
+            <form method="GET" action="/history" class="row g-3 align-items-center">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" name="search_query" placeholder="Cari berdasarkan Nama atau Serial Number Part..." value="{{ search_query or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <select name="equipment_filter" class="form-select">
+                        <option value="">-- Semua Equipment --</option>
+                        {% for eq in equipment_list %}
+                        <option value="{{ eq.id }}" {% if eq.id == equipment_filter|int %}selected{% endif %}>
+                            {{ eq.equipment_code }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Cari</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <table class="table table-striped table-bordered mt-4">
+        <thead class="table-dark">
+            <tr>
+                <th>Nama Part</th>
+                <th>Serial Number</th>
+                <th>Dipasang di</th>
+                <th>Tanggal Pasang</th>
+                <th>Tanggal Lepas</th>
+                <th>Umur Pakai (Hari)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in history_data %}
+            <tr>
+                <td>{{ row.part_name }}</td>
+                <td>{{ row.serial_number }}</td>
+                <td>{{ row.equipment_code }}</td>
+                <td>{{ row.install_date.strftime('%d %b %Y, %H:%M') }}</td>
+                <td>
+                    {% if row.removal_date %}
+                        {{ row.removal_date.strftime('%d %b %Y, %H:%M') }}
+                    {% else %}
+                        <span class="badge bg-success">Masih Terpasang</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if row.removal_date %}
+                        {{ (row.removal_date - row.install_date).days }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

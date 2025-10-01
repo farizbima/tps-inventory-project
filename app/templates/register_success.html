@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Part Berhasil Didaftarkan{% endblock %}
+{% block content %}
+    <div class="text-center">
+        <h2 class="text-success">Part Berhasil Didaftarkan!</h2>
+        <p>Gunakan QR Code di bawah ini untuk ditempel pada part.</p>
+        <p><strong>Serial Number:</strong> {{ serial_number }}</p>
+
+        <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR Code" class="img-fluid border my-3" style="max-width: 250px;">
+
+        <div>
+            <button onclick="window.print()" class="btn btn-primary">Cetak Halaman Ini</button>
+            <a href="/register" class="btn btn-secondary">Daftarkan Part Lain</a>
+        </div>
+    </div>
+{% endblock %}

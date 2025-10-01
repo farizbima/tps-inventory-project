@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Analisis{% endblock %}
+
+{% block content %}
+    <h2 class="text-center mb-4">Dashboard Analisis Parts</h2>
+
+    <div class="row text-center">
+        <div class="col-md-4">
+            <div class="card text-white bg-secondary mb-3">
+                <div class="card-header">IN STOCK</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ stats.in_stock }}</h5>
+                    <p class="card-text">Parts siap pasang</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">INSTALLED</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ stats.installed }}</h5>
+                    <p class="card-text">Parts sedang terpasang</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-header">REMOVED</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ stats.removed }}</h5>
+                    <p class="card-text">Parts sudah dilepas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <h4>Top 5 Parts dengan Umur Pakai Terpendek</h4>
+            <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                    <tr><th>Nama Part</th><th>Serial Number</th><th>Umur (Hari)</th></tr>
+                </thead>
+                <tbody>
+                    {% for part in shortest_lifespan %}
+                    <tr>
+                        <td>{{ part.part_name }}</td>
+                        <td>{{ part.serial_number }}</td>
+                        <td>{{ part.lifespan_days }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h4>Top 5 Equipment dengan Penggantian Terbanyak</h4>
+            <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                    <tr><th>Kode Equipment</th><th>Tipe</th><th>Jumlah Penggantian</th></tr>
+                </thead>
+                <tbody>
+                    {% for eq in most_changes %}
+                    <tr>
+                        <td>{{ eq.equipment_code }}</td>
+                        <td>{{ eq.equipment_type }}</td>
+                        <td>{{ eq.change_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

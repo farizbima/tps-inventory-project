@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Registrasi Part Baru{% endblock %}
+
+{% block content %}
+    <h2>Registrasi Part Baru</h2>
+    <p>Masukkan detail part yang baru datang.</p>
+
+    <form action="/register" method="POST" class="mt-4">
+        <div class="mb-3">
+            <label for="part_number" class="form-label">Part Number</label>
+            <input type="text" class="form-control" id="part_number" name="part_number" required>
+        </div>
+        <div class="mb-3">
+            <label for="part_name" class="form-label">Nama Part</label>
+            <input type="text" class="form-control" id="part_name" name="part_name" required>
+        </div>
+        <div class="mb-3">
+            <label for="vendor" class="form-label">Vendor</label>
+            <input type="text" class="form-control" id="vendor" name="vendor">
+        </div>
+        <button type="submit" class="btn btn-primary">Simpan dan Buat Serial Number</button>
+    </form>
+{% endblock %}
