@@ -320,5 +320,67 @@ def show_qr(serial_number):
 
     return render_template('show_qr.html', serial_number=serial_number, qr_code_image=qr_code_image)
 
+# --- ROUTE BARU UNTUK PENGELUARAN BARANG ---
+@app.route('/pengeluaran', methods=['GET', 'POST'])
+def pengeluaran_barang():
+    conn = get_db_connection()
+    if conn is None: return "Koneksi database gagal."
+    cursor = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        # Ambil data dari form
+        tanggal = request.form['tanggal']
+        pic = request.form['pic']
+        item_code = request.form['item_code']
+        qty_keluar = int(request.form['qty_keluar'])
+        equipment_id = request.form['equipment_id']
+        hm_km = request.form['hm_km']
+        keterangan = request.form['keterangan']
+
+        try:
+            # 1. Cek stok saat ini
+            cursor.execute("SELECT current_stock FROM master_items WHERE item_code = %s", (item_code,))
+            item = cursor.fetchone()
+            if item['current_stock'] < qty_keluar:
+                flash(f"Stok tidak mencukupi! Stok saat ini: {item['current_stock']}", "danger")
+                return redirect(url_for('pengeluaran_barang'))
+
+            # 2. Masukkan ke tabel transaksi
+            trans_query = """
+                INSERT INTO inventory_transactions 
+                (tanggal, pic, item_code, qty_keluar, equipment_id, hm_km, keterangan)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(trans_query, (tanggal, pic, item_code, qty_keluar, equipment_id, hm_km, keterangan))
+
+            # 3. Kurangi stok di tabel master
+            update_stock_query = "UPDATE master_items SET current_stock = current_stock - %s WHERE item_code = %s"
+            cursor.execute(update_stock_query, (qty_keluar, item_code))
+
+            conn.commit()
+            flash("Transaksi pengeluaran barang berhasil dicatat!", "success")
+            return redirect(url_for('pengeluaran_barang'))
+
+        except Error as e:
+            conn.rollback()
+            flash(f"Terjadi error: {e}", "danger")
+        finally:
+            cursor.close()
+            conn.close()
+
+    # --- Bagian GET (menampilkan form) ---
+    # Ambil daftar barang untuk dropdown
+    cursor.execute("SELECT item_code, nama_barang, current_stock FROM master_items ORDER BY nama_barang ASC")
+    master_items = cursor.fetchall()
+
+    # Ambil daftar equipment untuk dropdown
+    cursor.execute("SELECT * FROM equipment ORDER BY equipment_code ASC")
+    equipment_list = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template('pengeluaran.html', master_items=master_items, equipment_list=equipment_list)
+
 if __name__ == '__main__':
     app.run(debug=True)

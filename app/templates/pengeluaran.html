@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Form Pengeluaran Barang{% endblock %}
+{% block content %}
+    <h2 class="text-center">Form Pengeluaran Barang</h2>
+    <p class="text-center">Catat barang yang keluar dari gudang.</p>
+
+    <form method="POST" action="/pengeluaran" class="card p-4 mt-4">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="tanggal" class="form-label">Tanggal</label>
+                <input type="date" class="form-control" id="tanggal" name="tanggal" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="pic" class="form-label">PIC (Person in Charge)</label>
+                <input type="text" class="form-control" id="pic" name="pic" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label for="item_code" class="form-label">Nama Barang (Item Code)</label>
+                <select class="form-select" id="item_code" name="item_code" required>
+                    <option value="" disabled selected>-- Pilih Barang --</option>
+                    {% for item in master_items %}
+                        <option value="{{ item.item_code }}">{{ item.nama_barang }} - (Stok: {{ item.current_stock }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="qty_keluar" class="form-label">Jumlah Keluar</label>
+                <input type="number" class="form-control" id="qty_keluar" name="qty_keluar" min="1" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label for="equipment_id" class="form-label">Untuk Equipment</label>
+                <select class="form-select" id="equipment_id" name="equipment_id" required>
+                    <option value="" disabled selected>-- Pilih Equipment --</option>
+                    {% for eq in equipment_list %}
+                        <option value="{{ eq.id }}">{{ eq.equipment_code }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="hm_km" class="form-label">HM / KM</label>
+                <input type="text" class="form-control" id="hm_km" name="hm_km">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="keterangan" class="form-label">Keterangan</label>
+            <textarea class="form-control" id="keterangan" name="keterangan" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Simpan Transaksi</button>
+    </form>
+{% endblock %}
