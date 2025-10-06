@@ -16,7 +16,7 @@
     
     <div class="row">
         <div class="col-md-6">
-            <div class="card p-4">
+            <div class="card p-4 h-100">
                 <h4>Pasang Part Baru</h4>
                 <form id="install-form" action="/install" method="POST">
                     <div class="mb-3">
@@ -40,7 +40,7 @@
         </div>
 
         <div class="col-md-6">
-            <div class="card p-4">
+            <div class="card p-4 h-100">
                 <h4>Lepas Part</h4>
                 <form id="remove-form" action="/remove" method="POST">
                     <div class="mb-3">
@@ -56,25 +56,19 @@
 
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
-        // Menunggu semua elemen HTML dimuat sebelum menjalankan JavaScript
         document.addEventListener('DOMContentLoaded', function() {
             const scannerContainer = document.getElementById('scanner-container');
             const stopScanBtn = document.getElementById('stop-scan-btn');
 
-            const html5QrcodeScanner = new Html5QrcodeScanner(
-                "qr-reader", 
-                { fps: 10, qrbox: {width: 250, height: 250} },
-                false);
+            const html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
 
-            // Fungsi notifikasi (tidak berubah)
             window.showNotification = function(message, type) {
                 const notificationDiv = document.getElementById('notification');
-                notificationDiv.className = `alert alert-${type}`;
+                notificationDiv.className = `alert alert-${type} alert-dismissible fade show`;
                 notificationDiv.textContent = message;
                 notificationDiv.classList.remove('d-none');
             }
 
-            // Fungsi untuk memulai scanner (tidak berubah)
             window.startScanner = function(mode) {
                 scannerContainer.classList.remove('d-none');
                 
@@ -91,19 +85,18 @@
                 html5QrcodeScanner.render(onScanSuccess, () => {});
             }
             
-            // Fungsi untuk menghentikan scanner (tidak berubah)
             window.stopScanner = function() {
-                // Menggunakan .getState() untuk memeriksa apakah scanner sedang berjalan
-                if (html5QrcodeScanner.getState() === Html5Qrcode.Html5QrcodeScannerState.SCANNING) {
-                    html5QrcodeScanner.stop().then((ignore) => {
+                if (html5QrcodeScanner.getState() === 2) { // 2 = SCANNING
+                    html5QrcodeScanner.stop().then(() => {
                         scannerContainer.classList.add('d-none');
                     }).catch((err) => {
                         console.error("Gagal menghentikan scanner.", err);
+                        scannerContainer.classList.add('d-none');
                     });
                 }
             }
 
-            // INI BAGIAN PENTINGNYA: Menghubungkan tombol stop ke fungsinya
+            // Menghubungkan tombol kuning custom kita ke fungsi stopScanner
             stopScanBtn.addEventListener('click', stopScanner);
         });
     </script>
