@@ -1,6 +1,6 @@
 # app/main.py
 
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, flash, request, render_template, redirect, url_for
 import mysql.connector
 from mysql.connector import Error
 import time
