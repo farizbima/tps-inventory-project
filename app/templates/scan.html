@@ -10,8 +10,7 @@
     <div id="scanner-container" class="card my-4 d-none">
         <div class="card-body text-center">
             <div id="qr-reader" style="width:100%; max-width: 500px; margin: 0 auto;"></div>
-            <button id="stop-scan-btn" class="btn btn-warning mt-2">Tutup Scanner</button>
-        </div>
+            </div>
     </div>
     
     <div class="row">
@@ -58,8 +57,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const scannerContainer = document.getElementById('scanner-container');
-            const stopScanBtn = document.getElementById('stop-scan-btn');
-
             const html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
 
             window.showNotification = function(message, type) {
@@ -80,24 +77,14 @@
                         document.getElementById('serial_number_remove').value = decodedText;
                         showNotification(`Part untuk dilepas berhasil dipindai: ${decodedText}!`, 'info');
                     }
-                    stopScanner();
+                    // Setelah berhasil, panggil clear() untuk menghentikan scanner
+                    html5QrcodeScanner.clear().catch(error => {
+                        console.error("Gagal membersihkan scanner setelah sukses.", error);
+                    });
+                    scannerContainer.classList.add('d-none');
                 };
                 html5QrcodeScanner.render(onScanSuccess, () => {});
             }
-            
-            window.stopScanner = function() {
-                if (html5QrcodeScanner.getState() === 2) { // 2 = SCANNING
-                    html5QrcodeScanner.stop().then(() => {
-                        scannerContainer.classList.add('d-none');
-                    }).catch((err) => {
-                        console.error("Gagal menghentikan scanner.", err);
-                        scannerContainer.classList.add('d-none');
-                    });
-                }
-            }
-
-            // Menghubungkan tombol kuning custom kita ke fungsi stopScanner
-            stopScanBtn.addEventListener('click', stopScanner);
         });
     </script>
 {% endblock %}
