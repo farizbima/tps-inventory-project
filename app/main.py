@@ -42,52 +42,41 @@ def index():
     return render_template('scan.html', equipment_list=equipment_list)
 
 # GANTI FUNGSI LAMA ANDA DENGAN YANG INI
-@app.route('/register', methods=['GET', 'POST'])
-def register_part():
+# --- ROUTE BARU UNTUK PENERIMAAN BARANG ---
+@app.route('/penerimaan', methods=['GET', 'POST'])
+def penerimaan_barang():
+    conn = get_db_connection()
+    if conn is None: return "Koneksi database gagal."
+    cursor = conn.cursor(dictionary=True)
+
     if request.method == 'POST':
-        part_number = request.form['part_number']
-        part_name = request.form['part_name']
-        vendor = request.form['vendor']
-        serial_number = f"{part_number}-{int(time.time())}"
-        
-        conn = get_db_connection()
-        if conn is None: 
-            return "Koneksi database gagal."
-        
-        cursor = conn.cursor()
-        query = "INSERT INTO parts (part_number, part_name, vendor, serial_number, status) VALUES (%s, %s, %s, %s, 'in_stock')"
-        
+        item_code = request.form['item_code']
+        qty_masuk = int(request.form['qty_masuk'])
+        notes = request.form['notes'] # Kita akan gunakan ini nanti untuk log transaksi
+
         try:
-            # 1. Simpan data ke database (HANYA SATU KALI)
-            cursor.execute(query, (part_number, part_name, vendor, serial_number))
+            # Update stok di tabel master
+            update_stock_query = "UPDATE master_items SET current_stock = current_stock + %s WHERE item_code = %s"
+            cursor.execute(update_stock_query, (qty_masuk, item_code))
+
             conn.commit()
+            flash(f"Stok untuk {item_code} berhasil ditambah sebanyak {qty_masuk} unit!", "success")
+            return redirect(url_for('penerimaan_barang'))
 
-            # 2. Jika berhasil, buat gambar QR code
-            import qrcode
-            import io
-            import base64
-
-            img = qrcode.make(serial_number)
-            buf = io.BytesIO()
-            img.save(buf)
-            buf.seek(0)
-            
-            qr_code_image = base64.b64encode(buf.getvalue()).decode('utf-8')
-
-            # 3. Tampilkan halaman sukses
-            return render_template('register_success.html', serial_number=serial_number, qr_code_image=qr_code_image)
-        
         except Error as e:
-            # Jika terjadi error, batalkan perubahan dan tampilkan pesan
             conn.rollback()
-            return f"Gagal menyimpan data: {e}"
+            flash(f"Terjadi error: {e}", "danger")
         finally:
-            # Apapun yang terjadi, pastikan koneksi ditutup
             cursor.close()
             conn.close()
 
-    # Jika metodenya GET, tampilkan form registrasi
-    return render_template('register_part.html')
+    # --- Bagian GET (menampilkan form) ---
+    cursor.execute("SELECT item_code, nama_barang FROM master_items ORDER BY nama_barang ASC")
+    master_items = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return render_template('penerimaan.html', master_items=master_items)
 
 @app.route('/install', methods=['POST'])
 def install_part():

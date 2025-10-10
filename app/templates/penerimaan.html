@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Form Penerimaan Barang{% endblock %}
+{% block content %}
+    <h2 class="text-center">Form Penerimaan Barang (Goods Receipt)</h2>
+    <p class="text-center">Catat barang yang masuk ke gudang.</p>
+
+    <form method="POST" action="/penerimaan" class="card p-4 mt-4">
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label for="item_code" class="form-label">Nama Barang (Item Code)</label>
+                <select class="form-select" id="item_code" name="item_code" required>
+                    <option value="" disabled selected>-- Pilih Barang yang Akan Ditambah Stoknya --</option>
+                    {% for item in master_items %}
+                        <option value="{{ item.item_code }}">{{ item.nama_barang }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="qty_masuk" class="form-label">Jumlah Masuk</label>
+                <input type="number" class="form-control" id="qty_masuk" name="qty_masuk" min="1" required>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="notes" class="form-label">Catatan (Opsional, misal: dari PO nomor...)</label>
+            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Tambahkan ke Stok</button>
+    </form>
+{% endblock %}
