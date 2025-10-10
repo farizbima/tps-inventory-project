@@ -128,12 +128,14 @@ def penerimaan_barang():
             cursor.close()
             conn.close()
     
-    # Bagian GET: Ganti nama variabel agar cocok dengan template
+    # Bagian GET di akhir fungsi penerimaan_barang:
     cursor.execute("SELECT * FROM item_definitions ORDER BY part_name ASC")
-    item_definitions = cursor.fetchall() # Diubah dari existing_parts
+    item_definitions = cursor.fetchall()
     cursor.close()
     conn.close()
-    return render_template('penerimaan.html', existing_parts=item_definitions) # Diubah dari existing_parts
+    
+    # PASTIKAN VARIABEL YANG DIKIRIM ADALAH 'item_definitions'
+    return render_template('penerimaan.html', item_definitions=item_definitions)
 
 @app.route('/install', methods=['POST'])
 def install_part():
