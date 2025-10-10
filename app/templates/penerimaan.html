@@ -2,28 +2,76 @@
 {% block title %}Form Penerimaan Barang{% endblock %}
 {% block content %}
     <h2 class="text-center">Form Penerimaan Barang (Goods Receipt)</h2>
-    <p class="text-center">Catat barang yang masuk ke gudang.</p>
+    
+    <div class="form-check form-switch my-4">
+        <input class="form-check-input" type="checkbox" role="switch" id="isSerializedSwitch">
+        <label class="form-check-label" for="isSerializedSwitch">Daftarkan sebagai Part Unik dengan Serial Number (butuh QR Code)?</label>
+    </div>
 
-    <form method="POST" action="/penerimaan" class="card p-4 mt-4">
-        <div class="row">
-            <div class="col-md-8 mb-3">
-                <label for="item_code" class="form-label">Nama Barang (Item Code)</label>
-                <select class="form-select" id="item_code" name="item_code" required>
-                    <option value="" disabled selected>-- Pilih Barang yang Akan Ditambah Stoknya --</option>
-                    {% for item in master_items %}
-                        <option value="{{ item.item_code }}">{{ item.nama_barang }}</option>
-                    {% endfor %}
-                </select>
+    <div id="consumableForm">
+        <p>Catat barang habis pakai yang masuk ke gudang untuk menambah stok.</p>
+        <form method="POST" action="/penerimaan" class="card p-4 mt-4">
+            <input type="hidden" name="form_type" value="consumable">
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label for="item_code" class="form-label">Nama Barang (Item Code)</label>
+                    <select class="form-select" name="item_code" required>
+                        <option value="" disabled selected>-- Pilih Barang yang Akan Ditambah Stoknya --</option>
+                        {% for item in master_items %}
+                            <option value="{{ item.item_code }}">{{ item.nama_barang }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="qty_masuk" class="form-label">Jumlah Masuk</label>
+                    <input type="number" class="form-control" name="qty_masuk" min="1" required>
+                </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <label for="qty_masuk" class="form-label">Jumlah Masuk</label>
-                <input type="number" class="form-control" id="qty_masuk" name="qty_masuk" min="1" required>
+            <div class="mb-3">
+                <label for="notes" class="form-label">Catatan (Opsional)</label>
+                <textarea class="form-control" name="notes" rows="2"></textarea>
             </div>
-        </div>
-        <div class="mb-3">
-            <label for="notes" class="form-label">Catatan (Opsional, misal: dari PO nomor...)</label>
-            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
-        </div>
-        <button type="submit" class="btn btn-success">Tambahkan ke Stok</button>
-    </form>
+            <button type="submit" class="btn btn-success">Tambahkan ke Stok</button>
+        </form>
+    </div>
+
+    <div id="serializedForm" style="display: none;">
+        <p>Daftarkan part baru yang memiliki serial number individual.</p>
+        <form method="POST" action="/penerimaan" class="card p-4 mt-4">
+            <input type="hidden" name="form_type" value="serialized">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="part_number" class="form-label">Part Number</label>
+                    <input type="text" class="form-control" name="part_number" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="part_name" class="form-label">Nama Part</label>
+                    <input type="text" class="form-control" name="part_name" required>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label for="vendor" class="form-label">Vendor</label>
+                    <input type="text" class="form-control" name="vendor">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="quantity" class="form-label">Jumlah Unit</label>
+                    <input type="number" class="form-control" name="quantity" min="1" value="1" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Daftarkan & Buat QR Code</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('isSerializedSwitch').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('consumableForm').style.display = 'none';
+                document.getElementById('serializedForm').style.display = 'block';
+            } else {
+                document.getElementById('consumableForm').style.display = 'block';
+                document.getElementById('serializedForm').style.display = 'none';
+            }
+        });
+    </script>
 {% endblock %}

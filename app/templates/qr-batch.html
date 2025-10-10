@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Hasil QR Code{% endblock %}
+{% block content %}
+    <div class="text-center">
+        <h2>Part Unik Berhasil Didaftarkan!</h2>
+        <p>Gunakan QR Code di bawah ini untuk ditempel pada masing-masing part.</p>
+        <button onclick="window.print()" class="btn btn-primary my-3">Cetak Semua QR Code</button>
+    </div>
+    <div class="row">
+        {% for item in new_parts %}
+        <div class="col-md-4 text-center border p-3">
+            <p class="mb-1"><strong>{{ item.part_name }}</strong></p>
+            <p><strong>Serial:</strong> {{ item.serial_number }}</p>
+            <img src="data:image/png;base64,{{ item.qr_image }}" alt="QR Code" class="img-fluid">
+        </div>
+        {% endfor %}
+    </div>
+{% endblock %}

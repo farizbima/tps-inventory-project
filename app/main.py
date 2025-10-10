@@ -56,22 +56,48 @@ def penerimaan_barang():
     cursor = conn.cursor(dictionary=True)
 
     if request.method == 'POST':
-        item_code = request.form['item_code']
-        qty_masuk = int(request.form['qty_masuk'])
-        notes = request.form['notes'] # Kita akan gunakan ini nanti untuk log transaksi
+        form_type = request.form.get('form_type')
 
         try:
-            # Update stok di tabel master
-            update_stock_query = "UPDATE master_items SET current_stock = current_stock + %s WHERE item_code = %s"
-            cursor.execute(update_stock_query, (qty_masuk, item_code))
+            if form_type == 'serialized':
+                # --- LOGIKA UNTUK PART UNIK DENGAN QR CODE ---
+                part_number = request.form['part_number']
+                part_name = request.form['part_name']
+                vendor = request.form['vendor']
+                quantity = int(request.form['quantity'])
 
-            conn.commit()
-            flask.flash(f"Stok untuk {item_code} berhasil ditambah sebanyak {qty_masuk} unit!", "success")
-            return redirect(url_for('penerimaan_barang'))
+                new_parts = []
+                for _ in range(quantity):
+                    serial_number = f"{part_number}-{int(time.time())}-{len(new_parts)}"
+                    query = "INSERT INTO parts (part_number, part_name, vendor, serial_number, status) VALUES (%s, %s, %s, %s, 'in_stock')"
+                    cursor.execute(query, (part_number, part_name, vendor, serial_number))
+
+                    # Buat gambar QR code
+                    img = qrcode.make(serial_number)
+                    buf = io.BytesIO()
+                    img.save(buf)
+                    qr_image = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+                    new_parts.append({'serial_number': serial_number, 'part_name': part_name, 'qr_image': qr_image})
+
+                conn.commit()
+                return render_template('qr_batch.html', new_parts=new_parts)
+
+            else: # Default ke 'consumable'
+                # --- LOGIKA UNTUK BARANG HABIS PAKAI (TETAP SAMA) ---
+                item_code = request.form['item_code']
+                qty_masuk = int(request.form['qty_masuk'])
+
+                update_stock_query = "UPDATE master_items SET current_stock = current_stock + %s WHERE item_code = %s"
+                cursor.execute(update_stock_query, (qty_masuk, item_code))
+                conn.commit()
+                flask.flash(f"Stok untuk {item_code} berhasil ditambah sebanyak {qty_masuk} unit!", "success")
+                return redirect(url_for('penerimaan_barang'))
 
         except Error as e:
             conn.rollback()
             flask.flash(f"Terjadi error: {e}", "danger")
+            return redirect(url_for('penerimaan_barang'))
         finally:
             cursor.close()
             conn.close()
@@ -81,7 +107,6 @@ def penerimaan_barang():
     master_items = cursor.fetchall()
     cursor.close()
     conn.close()
-
     return render_template('penerimaan.html', master_items=master_items)
 
 @app.route('/install', methods=['POST'])
