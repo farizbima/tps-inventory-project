@@ -1,14 +1,12 @@
 {% extends "base.html" %}
-
 {% block title %}Detail Stok Part{% endblock %}
-
 {% block content %}
     <h2 class="text-center">Detail Stok untuk Part</h2>
     <div class="card bg-light mb-4">
         <div class="card-body">
             <h5 class="card-title">{{ part_info.part_name }}</h5>
             <p class="card-text mb-1"><strong>Part Number:</strong> {{ part_info.part_number }}</p>
-            <p class="card-text"><strong>Vendor:</strong> {{ part_info.vendor }}</p>
+            <p class="card-text"><strong>Vendor:</strong> {{ part_info.vendor or 'N/A' }}</p>
         </div>
     </div>
 
@@ -17,7 +15,7 @@
         <thead class="table-light">
             <tr>
                 <th>Serial Number</th>
-                <th>Tanggal Beli</th>
+                <th>Tanggal Penerimaan</th>
                 <th class="text-center">Aksi</th>
             </tr>
         </thead>
@@ -25,12 +23,16 @@
             {% for part in part_list %}
             <tr>
                 <td>{{ part.serial_number }}</td>
-                <td>{{ part.purchase_date.strftime('%d %b %Y') if part.purchase_date else 'N/A' }}</td>
+                <td>{{ part.receipt_date.strftime('%d %b %Y, %H:%M') if part.receipt_date else 'N/A' }}</td>
                 <td class="text-center">
                     <a href="{{ url_for('show_qr', serial_number=part.serial_number) }}" class="btn btn-sm btn-outline-primary" target="_blank">
                         Dapatkan QR Code
                     </a>
                 </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3" class="text-center">Tidak ada stok individual untuk item ini.</td>
             </tr>
             {% endfor %}
         </tbody>
