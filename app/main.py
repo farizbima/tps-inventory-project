@@ -51,48 +51,45 @@ def index():
 # --- ROUTE BARU UNTUK PENERIMAAN BARANG ---
 @app.route('/penerimaan', methods=['GET', 'POST'])
 def penerimaan_barang():
-    conn = get_db_connection()
-    if conn is None: return "Koneksi database gagal."
-    cursor = conn.cursor(dictionary=True)
-
     if request.method == 'POST':
-        form_type = request.form.get('form_type')
+        # Ambil data dari form baru
+        part_number = request.form['part_number']
+        part_name = request.form['part_name']
+        vendor = request.form.get('vendor', '') # Gunakan .get() untuk field opsional
+        price = request.form.get('price', 0)
+        quantity = int(request.form['quantity'])
 
+        conn = get_db_connection()
+        if conn is None: return "Koneksi database gagal."
+        cursor = conn.cursor(dictionary=True)
+        
+        new_parts = []
         try:
-            if form_type == 'serialized':
-                # --- LOGIKA UNTUK PART UNIK DENGAN QR CODE ---
-                part_number = request.form['part_number']
-                part_name = request.form['part_name']
-                vendor = request.form['vendor']
-                quantity = int(request.form['quantity'])
-
-                new_parts = []
-                for _ in range(quantity):
-                    serial_number = f"{part_number}-{int(time.time())}-{len(new_parts)}"
-                    query = "INSERT INTO parts (part_number, part_name, vendor, serial_number, status) VALUES (%s, %s, %s, %s, 'in_stock')"
-                    cursor.execute(query, (part_number, part_name, vendor, serial_number))
-
-                    # Buat gambar QR code
-                    img = qrcode.make(serial_number)
-                    buf = io.BytesIO()
-                    img.save(buf)
-                    qr_image = base64.b64encode(buf.getvalue()).decode('utf-8')
-
-                    new_parts.append({'serial_number': serial_number, 'part_name': part_name, 'qr_image': qr_image})
-
-                conn.commit()
-                return render_template('qr_batch.html', new_parts=new_parts)
-
-            else: # Default ke 'consumable'
-                # --- LOGIKA UNTUK BARANG HABIS PAKAI (TETAP SAMA) ---
-                item_code = request.form['item_code']
-                qty_masuk = int(request.form['qty_masuk'])
-
-                update_stock_query = "UPDATE master_items SET current_stock = current_stock + %s WHERE item_code = %s"
-                cursor.execute(update_stock_query, (qty_masuk, item_code))
-                conn.commit()
-                flask.flash(f"Stok untuk {item_code} berhasil ditambah sebanyak {qty_masuk} unit!", "success")
-                return redirect(url_for('penerimaan_barang'))
+            # Loop sebanyak jumlah unit yang diterima
+            for i in range(quantity):
+                # Buat serial number unik untuk setiap unit
+                serial_number = f"{part_number}-{int(time.time())}-{i+1}"
+                receipt_date = datetime.now()
+                
+                # Masukkan setiap unit sebagai baris baru di tabel 'parts'
+                query = """
+                    INSERT INTO parts 
+                    (part_number, part_name, vendor, price, serial_number, receipt_date, status) 
+                    VALUES (%s, %s, %s, %s, %s, %s, 'in_stock')
+                """
+                cursor.execute(query, (part_number, part_name, vendor, price, serial_number, receipt_date))
+                
+                # Buat gambar QR code untuk ditampilkan
+                img = qrcode.make(serial_number)
+                buf = io.BytesIO()
+                img.save(buf)
+                qr_image = base64.b64encode(buf.getvalue()).decode('utf-8')
+                
+                new_parts.append({'serial_number': serial_number, 'part_name': part_name, 'qr_image': qr_image})
+            
+            conn.commit()
+            # Tampilkan semua QR code yang baru dibuat
+            return render_template('qr_batch.html', new_parts=new_parts)
 
         except Error as e:
             conn.rollback()
@@ -101,13 +98,9 @@ def penerimaan_barang():
         finally:
             cursor.close()
             conn.close()
-
-    # --- Bagian GET (menampilkan form) ---
-    cursor.execute("SELECT item_code, nama_barang FROM master_items ORDER BY nama_barang ASC")
-    master_items = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template('penerimaan.html', master_items=master_items)
+    
+    # Bagian GET, cukup tampilkan form kosong
+    return render_template('penerimaan.html')
 
 @app.route('/install', methods=['POST'])
 def install_part():
