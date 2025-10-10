@@ -247,36 +247,37 @@ def dashboard():
                            shortest_lifespan=shortest_lifespan, 
                            most_changes=most_changes)
 
+# GANTI FUNGSI LAMA DENGAN VERSI BARU INI
 @app.route('/inventory')
 def inventory():
     search_query = request.args.get('search_query', '')
     conn = get_db_connection()
     if conn is None:
         return "Koneksi database gagal."
-    
+
     cursor = conn.cursor(dictionary=True)
-    
+
     params = []
-    # Query ini akan mengelompokkan part berdasarkan part_number, nama, dan vendor,
-    # lalu menghitung berapa banyak yang statusnya 'in_stock'
+    # Query ini sekarang membaca langsung dari tabel master_items
     query = """
-        SELECT part_number, part_name, vendor, COUNT(*) as stock_count
-        FROM parts
-        WHERE status = 'in_stock'
+        SELECT item_code, nama_barang, part_number, vendor, current_stock
+        FROM master_items
+        WHERE 1=1 
     """
 
     if search_query:
-        query += " AND (part_name LIKE %s OR part_number LIKE %s)"
-        params.extend([f"%{search_query}%", f"%{search_query}%"])
+        query += " AND (nama_barang LIKE %s OR part_number LIKE %s OR item_code LIKE %s)"
+        search_param = f"%{search_query}%"
+        params.extend([search_param, search_param, search_param])
 
-    query += " GROUP BY part_number, part_name, vendor ORDER BY part_name ASC"
+    query += " ORDER BY nama_barang ASC"
 
     cursor.execute(query, tuple(params))
     inventory_data = cursor.fetchall()
-    
+
     cursor.close()
     conn.close()
-    
+
     return render_template('inventory.html', 
                            inventory_data=inventory_data, 
                            search_query=search_query)
