@@ -55,31 +55,36 @@ def penerimaan_barang():
 
     if request.method == 'POST':
         form_type = request.form.get('form_type')
-
+        
         try:
             if form_type == 'new':
-                # Logika untuk barang baru (tidak berubah)
+                # Logika untuk barang baru
                 part_number = request.form['part_number']
                 part_name = request.form['part_name']
                 vendor = request.form.get('vendor', '')
-                price = request.form.get('price', 0)
+                price_str = request.form.get('price', '0')
                 quantity = int(request.form['quantity_new'])
-
+                
+                # Konversi harga ke angka
+                price = float(price_str) if price_str else 0.00
+                
                 # Simpan juga definisi item baru ini ke tabel master
-                insert_def_query = "INSERT INTO item_definitions (part_number, part_name, vendor, price) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE part_name=VALUES(part_name)"
+                insert_def_query = "INSERT INTO item_definitions (part_number, part_name, vendor, price) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE part_name=VALUES(part_name), vendor=VALUES(vendor), price=VALUES(price)"
                 cursor.execute(insert_def_query, (part_number, part_name, vendor, price))
 
             else: # Logika untuk barang lama (existing)
                 part_number = request.form['part_number_existing']
                 quantity = int(request.form['quantity'])
-
-                # Ambil detail dari tabel definisi item
+                
+                # =================================================================
+                # INI BAGIAN YANG DIPERBAIKI: Mengambil data dari 'item_definitions'
+                # =================================================================
                 cursor.execute("SELECT part_name, vendor, price FROM item_definitions WHERE part_number = %s", (part_number,))
                 item_def = cursor.fetchone()
                 if not item_def:
                     flask.flash("Error: Part number yang dipilih tidak valid.", "danger")
                     return redirect(url_for('penerimaan_barang'))
-
+                
                 part_name = item_def['part_name']
                 vendor = item_def['vendor']
                 price = item_def['price']
@@ -89,19 +94,31 @@ def penerimaan_barang():
             for i in range(quantity):
                 serial_number = f"{part_number}-{int(time.time())}-{i+1}"
                 receipt_date = datetime.now()
-
-                query = """
+                
+                query_insert_part = """
                     INSERT INTO parts (part_number, part_name, vendor, price, serial_number, receipt_date, status) 
                     VALUES (%s, %s, %s, %s, %s, %s, 'in_stock')
                 """
-                cursor.execute(query, (part_number, part_name, vendor, price, serial_number, receipt_date))
-
-                # ... (sisa logika log transaksi dan pembuatan QR code tetap sama) ...
-                # (Pastikan kode log transaksi Anda ada di sini)
-
+                cursor.execute(query_insert_part, (part_number, part_name, vendor, price, serial_number, receipt_date))
+                
+                # Catat ke log transaksi
+                last_id = cursor.lastrowid 
+                log_query = """
+                    INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type)
+                    VALUES (%s, %s, %s, %s, %s, 'PENERIMAAN')
+                """
+                cursor.execute(log_query, (receipt_date, last_id, serial_number, part_number, part_name))
+                
+                # Buat gambar QR untuk ditampilkan
+                img = qrcode.make(serial_number)
+                buf = io.BytesIO()
+                img.save(buf)
+                buf.seek(0)
+                qr_image = base64.b64encode(buf.getvalue()).decode('utf-8')
+                new_parts.append({'serial_number': serial_number, 'part_name': part_name, 'qr_image': qr_image})
+            
             conn.commit()
-            # ... (kode redirect ke qr_batch.html tetap sama) ...
-            return render_template('qr_batch.html', new_parts=new_parts) # Asumsi kode pembuatan QR ada di atas
+            return render_template('qr_batch.html', new_parts=new_parts)
 
         except Error as e:
             conn.rollback()
@@ -110,14 +127,13 @@ def penerimaan_barang():
         finally:
             cursor.close()
             conn.close()
-
-    # Bagian GET: Ambil daftar dari tabel definisi item yang baru
+    
+    # Bagian GET: Ganti nama variabel agar cocok dengan template
     cursor.execute("SELECT * FROM item_definitions ORDER BY part_name ASC")
-    item_definitions = cursor.fetchall()
+    item_definitions = cursor.fetchall() # Diubah dari existing_parts
     cursor.close()
     conn.close()
-    # Ganti nama variabel yang dikirim ke template
-    return render_template('penerimaan.html', item_definitions=item_definitions)
+    return render_template('penerimaan.html', existing_parts=item_definitions) # Diubah dari existing_parts
 
 @app.route('/install', methods=['POST'])
 def install_part():
