@@ -16,9 +16,9 @@
                 <label for="part_number_existing" class="form-label">Pilih Barang</label>
                 <select class="form-select" name="part_number_existing" required>
                     <option value="" disabled selected>-- Pilih Jenis Barang --</option>
-                        {% for item in item_definitions %}
-                    <option value="{{ item.part_number }}">{{ item.part_name }} ({{ item.part_number }})</option>
-                        {% endfor %}
+                    {% for item in item_definitions %}
+                        <option value="{{ item.part_number }}">{{ item.part_name }} ({{ item.part_number }})</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="mb-3">
