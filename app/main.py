@@ -268,37 +268,25 @@ def dashboard():
 # GANTI FUNGSI LAMA DENGAN VERSI BARU INI
 @app.route('/inventory')
 def inventory():
-    search_query = request.args.get('search_query', '')
     conn = get_db_connection()
-    if conn is None:
-        return "Koneksi database gagal."
-
+    if conn is None: return "Koneksi database gagal."
     cursor = conn.cursor(dictionary=True)
 
-    params = []
-    # Query ini sekarang membaca langsung dari tabel master_items
+    # Query ini mengelompokkan data dari tabel 'parts'
     query = """
-        SELECT item_code, nama_barang, part_number, vendor, current_stock
-        FROM master_items
-        WHERE 1=1 
+        SELECT part_number, part_name, vendor, COUNT(*) as stock_count
+        FROM parts
+        WHERE status = 'in_stock'
+        GROUP BY part_number, part_name, vendor
+        ORDER BY part_name ASC
     """
-
-    if search_query:
-        query += " AND (nama_barang LIKE %s OR part_number LIKE %s OR item_code LIKE %s)"
-        search_param = f"%{search_query}%"
-        params.extend([search_param, search_param, search_param])
-
-    query += " ORDER BY nama_barang ASC"
-
-    cursor.execute(query, tuple(params))
-    inventory_data = cursor.fetchall()
+    cursor.execute(query)
+    inventory_summary = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
-    return render_template('inventory.html', 
-                           inventory_data=inventory_data, 
-                           search_query=search_query)
+    return render_template('inventory.html', inventory_summary=inventory_summary)
 
 # Tambahkan route ini di main.py
 
@@ -338,64 +326,42 @@ def show_qr(serial_number):
 # --- ROUTE BARU UNTUK PENGELUARAN BARANG ---
 @app.route('/pengeluaran', methods=['GET', 'POST'])
 def pengeluaran_barang():
-    conn = get_db_connection()
-    if conn is None: return "Koneksi database gagal."
-    cursor = conn.cursor(dictionary=True)
-
     if request.method == 'POST':
-        # Ambil data dari form
-        tanggal = request.form['tanggal']
-        pic = request.form['pic']
-        item_code = request.form['item_code']
-        qty_keluar = int(request.form['qty_keluar'])
-        equipment_id = request.form['equipment_id']
-        hm_km = request.form['hm_km']
-        keterangan = request.form['keterangan']
+        serial_number = request.form['serial_number']
+        notes = request.form.get('notes', '')
+
+        conn = get_db_connection()
+        if conn is None: return "Koneksi database gagal."
+        cursor = conn.cursor(dictionary=True)
 
         try:
-            # 1. Cek stok saat ini
-            cursor.execute("SELECT current_stock FROM master_items WHERE item_code = %s", (item_code,))
-            item = cursor.fetchone()
-            if item['current_stock'] < qty_keluar:
-                flash(f"Stok tidak mencukupi! Stok saat ini: {item['current_stock']}", "danger")
+            # Cek dulu status part
+            cursor.execute("SELECT * FROM parts WHERE serial_number = %s", (serial_number,))
+            part = cursor.fetchone()
+            if not part:
+                flask.flash(f"Error: Part dengan serial number {serial_number} tidak ditemukan.", "danger")
+                return redirect(url_for('pengeluaran_barang'))
+            if part['status'] != 'in_stock':
+                flask.flash(f"Error: Part {serial_number} tidak bisa dikeluarkan karena statusnya '{part['status']}'.", "warning")
                 return redirect(url_for('pengeluaran_barang'))
 
-            # 2. Masukkan ke tabel transaksi
-            trans_query = """
-                INSERT INTO inventory_transactions 
-                (tanggal, pic, item_code, qty_keluar, equipment_id, hm_km, keterangan)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(trans_query, (tanggal, pic, item_code, qty_keluar, equipment_id, hm_km, keterangan))
-
-            # 3. Kurangi stok di tabel master
-            update_stock_query = "UPDATE master_items SET current_stock = current_stock - %s WHERE item_code = %s"
-            cursor.execute(update_stock_query, (qty_keluar, item_code))
-
+            # Update status menjadi 'used'
+            update_query = "UPDATE parts SET status = 'used' WHERE serial_number = %s"
+            cursor.execute(update_query, (serial_number,))
             conn.commit()
-            flash("Transaksi pengeluaran barang berhasil dicatat!", "success")
-            return redirect(url_for('pengeluaran_barang'))
+            flask.flash(f"Part {part['part_name']} ({serial_number}) berhasil dikeluarkan dari stok.", "success")
 
         except Error as e:
             conn.rollback()
-            flash(f"Terjadi error: {e}", "danger")
+            flask.flash(f"Terjadi error database: {e}", "danger")
         finally:
             cursor.close()
             conn.close()
 
-    # --- Bagian GET (menampilkan form) ---
-    # Ambil daftar barang untuk dropdown
-    cursor.execute("SELECT item_code, nama_barang, current_stock FROM master_items ORDER BY nama_barang ASC")
-    master_items = cursor.fetchall()
+        return redirect(url_for('pengeluaran_barang'))
 
-    # Ambil daftar equipment untuk dropdown
-    cursor.execute("SELECT * FROM equipment ORDER BY equipment_code ASC")
-    equipment_list = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    return render_template('pengeluaran.html', master_items=master_items, equipment_list=equipment_list)
+    # Bagian GET, hanya menampilkan halaman
+    return render_template('pengeluaran.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
