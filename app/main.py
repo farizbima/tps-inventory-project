@@ -1,16 +1,22 @@
 # app/main.py
 
-from curses import flash
+# Impor library standar Flask
 from flask import Flask, request, render_template, redirect, url_for
+import flask  # Ditambahkan untuk mengatasi konflik nama 'flash'
+
+# Impor untuk database
 import mysql.connector
 from mysql.connector import Error
+
+# Impor library pendukung lainnya
 import time
 from datetime import datetime
 import io
 import base64
-import os
-import config
 import qrcode
+
+# Impor file konfigurasi kita
+import config
 
 app = Flask(__name__)
 
@@ -60,12 +66,12 @@ def penerimaan_barang():
             cursor.execute(update_stock_query, (qty_masuk, item_code))
 
             conn.commit()
-            flash(f"Stok untuk {item_code} berhasil ditambah sebanyak {qty_masuk} unit!", "success")
+            flask.flash(f"Stok untuk {item_code} berhasil ditambah sebanyak {qty_masuk} unit!", "success")
             return redirect(url_for('penerimaan_barang'))
 
         except Error as e:
             conn.rollback()
-            flash(f"Terjadi error: {e}", "danger")
+            flask.flash(f"Terjadi error: {e}", "danger")
         finally:
             cursor.close()
             conn.close()
