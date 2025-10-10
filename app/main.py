@@ -47,48 +47,65 @@ def index():
     conn.close()
     return render_template('scan.html', equipment_list=equipment_list)
 
-# GANTI FUNGSI LAMA ANDA DENGAN YANG INI
-# --- ROUTE BARU UNTUK PENERIMAAN BARANG ---
 @app.route('/penerimaan', methods=['GET', 'POST'])
 def penerimaan_barang():
-    if request.method == 'POST':
-        # Ambil data dari form baru
-        part_number = request.form['part_number']
-        part_name = request.form['part_name']
-        vendor = request.form.get('vendor', '') # Gunakan .get() untuk field opsional
-        price = request.form.get('price', 0)
-        quantity = int(request.form['quantity'])
+    conn = get_db_connection()
+    if conn is None: return "Koneksi database gagal."
+    cursor = conn.cursor(dictionary=True)
 
-        conn = get_db_connection()
-        if conn is None: return "Koneksi database gagal."
-        cursor = conn.cursor(dictionary=True)
+    if request.method == 'POST':
+        form_type = request.form.get('form_type')
         
-        new_parts = []
         try:
-            # Loop sebanyak jumlah unit yang diterima
+            if form_type == 'new':
+                # Logika untuk barang baru
+                part_number = request.form['part_number']
+                part_name = request.form['part_name']
+                vendor = request.form.get('vendor', '')
+                price = request.form.get('price', 0)
+                quantity = int(request.form['quantity_new'])
+            else: # Logika untuk barang lama (existing)
+                part_number = request.form['part_number_existing']
+                quantity = int(request.form['quantity'])
+                
+                # Ambil detail lain dari database berdasarkan part_number
+                cursor.execute("SELECT part_name, vendor, price FROM parts WHERE part_number = %s LIMIT 1", (part_number,))
+                existing_part_details = cursor.fetchone()
+                if not existing_part_details:
+                    flask.flash("Error: Part number yang dipilih tidak valid.", "danger")
+                    return redirect(url_for('penerimaan_barang'))
+                
+                part_name = existing_part_details['part_name']
+                vendor = existing_part_details['vendor']
+                price = existing_part_details['price']
+
+            # Proses pembuatan item dan QR code (sama untuk keduanya)
+            new_parts = []
             for i in range(quantity):
-                # Buat serial number unik untuk setiap unit
                 serial_number = f"{part_number}-{int(time.time())}-{i+1}"
                 receipt_date = datetime.now()
                 
-                # Masukkan setiap unit sebagai baris baru di tabel 'parts'
                 query = """
                     INSERT INTO parts 
                     (part_number, part_name, vendor, price, serial_number, receipt_date, status) 
                     VALUES (%s, %s, %s, %s, %s, %s, 'in_stock')
                 """
                 cursor.execute(query, (part_number, part_name, vendor, price, serial_number, receipt_date))
+                # Dapatkan ID part yang baru saja di-insert
+                last_id = cursor.lastrowid 
+                log_query = """
+                INSERT INTO transaction_log (timestamp, part_id, serial_number, transaction_type, quantity)
+                VALUES (%s, %s, %s, 'PENERIMAAN', 1)
+                """
+                cursor.execute(log_query, (receipt_date, last_id, serial_number))
                 
-                # Buat gambar QR code untuk ditampilkan
                 img = qrcode.make(serial_number)
                 buf = io.BytesIO()
                 img.save(buf)
                 qr_image = base64.b64encode(buf.getvalue()).decode('utf-8')
-                
                 new_parts.append({'serial_number': serial_number, 'part_name': part_name, 'qr_image': qr_image})
             
             conn.commit()
-            # Tampilkan semua QR code yang baru dibuat
             return render_template('qr_batch.html', new_parts=new_parts)
 
         except Error as e:
@@ -99,8 +116,12 @@ def penerimaan_barang():
             cursor.close()
             conn.close()
     
-    # Bagian GET, cukup tampilkan form kosong
-    return render_template('penerimaan.html')
+    # Bagian GET: Ambil daftar jenis barang yang sudah ada untuk dropdown
+    cursor.execute("SELECT DISTINCT part_number, part_name FROM parts ORDER BY part_name ASC")
+    existing_parts = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template('penerimaan.html', existing_parts=existing_parts)
 
 @app.route('/install', methods=['POST'])
 def install_part():
@@ -344,6 +365,13 @@ def pengeluaran_barang():
             if part['status'] != 'in_stock':
                 flask.flash(f"Error: Part {serial_number} tidak bisa dikeluarkan karena statusnya '{part['status']}'.", "warning")
                 return redirect(url_for('pengeluaran_barang'))
+            
+            # Setelah validasi, sebelum UPDATE
+            log_query = """
+            INSERT INTO transaction_log (timestamp, part_id, serial_number, transaction_type, quantity, notes)
+            VALUES (%s, %s, %s, 'PENGELUARAN', -1, %s)
+            """
+            cursor.execute(log_query, (datetime.now(), part['id'], serial_number, notes))
 
             # Update status menjadi 'used'
             update_query = "UPDATE parts SET status = 'used' WHERE serial_number = %s"

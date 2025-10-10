@@ -1,34 +1,75 @@
 {% extends "base.html" %}
 {% block title %}Form Penerimaan Barang{% endblock %}
 {% block content %}
-    <h2 class="text-center">Form Penerimaan Barang (Goods Receipt)</h2>
-    <p class="text-center">Daftarkan semua barang yang masuk ke gudang. Setiap unit akan mendapatkan Serial Number & QR Code unik.</p>
+    <h2 class="text-center">Form Penerimaan Barang</h2>
 
-    <form method="POST" action="/penerimaan" class="card p-4 mt-4">
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="part_number" class="form-label">Part Number</label>
-                <input type="text" class="form-control" name="part_number" required>
+    <div class="form-check form-switch my-4">
+        <input class="form-check-input" type="checkbox" role="switch" id="isNewItemSwitch">
+        <label class="form-check-label" for="isNewItemSwitch">Input sebagai Jenis Barang Baru?</label>
+    </div>
+
+    <div id="existingItemForm">
+        <p>Gunakan form ini untuk menambah stok barang yang sudah terdaftar di sistem.</p>
+        <form method="POST" action="/penerimaan" class="card p-4 mt-4">
+            <input type="hidden" name="form_type" value="existing">
+            <div class="mb-3">
+                <label for="part_number_existing" class="form-label">Pilih Barang</label>
+                <select class="form-select" name="part_number_existing" required>
+                    <option value="" disabled selected>-- Pilih Jenis Barang --</option>
+                    {% for item in existing_parts %}
+                        <option value="{{ item.part_number }}">{{ item.part_name }} ({{ item.part_number }})</option>
+                    {% endfor %}
+                </select>
             </div>
-            <div class="col-md-6 mb-3">
-                <label for="part_name" class="form-label">Nama Part / Barang</label>
-                <input type="text" class="form-control" name="part_name" required>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="vendor" class="form-label">Vendor (Opsional)</label>
-                <input type="text" class="form-control" name="vendor">
-            </div>
-            <div class="col-md-3 mb-3">
-                <label for="price" class="form-label">Harga per Unit (Opsional)</label>
-                <input type="number" step="0.01" class="form-control" name="price" placeholder="Contoh: 150000">
-            </div>
-            <div class="col-md-3 mb-3">
+            <div class="mb-3">
                 <label for="quantity" class="form-label">Jumlah Unit Diterima</label>
-                <input type="number" class="form-control" name="quantity" min="1" value="1" required>
+                <input type="number" class="form-control" name="quantity" min="1" required>
             </div>
-        </div>
-        <button type="submit" class="btn btn-primary">Daftarkan & Buat QR Code</button>
-    </form>
+            <button type="submit" class="btn btn-success">Tambahkan Stok & Buat QR Code</button>
+        </form>
+    </div>
+
+    <div id="newItemForm" style="display: none;">
+        <p>Gunakan form ini jika jenis barang belum pernah terdaftar sebelumnya.</p>
+        <form method="POST" action="/penerimaan" class="card p-4 mt-4">
+            <input type="hidden" name="form_type" value="new">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="part_number" class="form-label">Part Number (Baru)</label>
+                    <input type="text" class="form-control" name="part_number" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="part_name" class="form-label">Nama Part / Barang (Baru)</label>
+                    <input type="text" class="form-control" name="part_name" required>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="vendor" class="form-label">Vendor (Opsional)</label>
+                    <input type="text" class="form-control" name="vendor">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="price" class="form-label">Harga per Unit (Opsional)</label>
+                    <input type="number" step="0.01" class="form-control" name="price">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="quantity_new" class="form-label">Jumlah Unit Diterima</label>
+                    <input type="number" class="form-control" name="quantity_new" min="1" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Daftarkan & Buat QR Code</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('isNewItemSwitch').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('existingItemForm').style.display = 'none';
+                document.getElementById('newItemForm').style.display = 'block';
+            } else {
+                document.getElementById('existingItemForm').style.display = 'block';
+                document.getElementById('newItemForm').style.display = 'none';
+            }
+        });
+    </script>
 {% endblock %}
