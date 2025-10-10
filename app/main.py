@@ -1,7 +1,7 @@
 # app/main.py
 
 # Impor library standar Flask
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template, redirect, url_for, flash
 import flask  # Ditambahkan untuk mengatasi konflik nama 'flash'
 
 # Impor untuk database
