@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Log Transaksi{% endblock %}
+{% block content %}
+    <h2 class="text-center">Log Transaksi Inventaris</h2>
+    <p class="text-center">Riwayat semua pergerakan barang masuk dan keluar.</p>
+    <table class="table table-striped table-bordered table-sm mt-4">
+        <thead class="table-dark">
+            <tr>
+                <th>Waktu</th>
+                <th>Nama Barang</th>
+                <th>Serial Number</th>
+                <th>Tipe Transaksi</th>
+                <th>PIC</th>
+                <th>Equipment</th>
+                <th>Catatan</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.timestamp.strftime('%d %b %Y, %H:%M') }}</td>
+                <td>{{ log.part_name }}</td>
+                <td>{{ log.serial_number }}</td>
+                <td>
+                    {% if log.transaction_type == 'PENERIMAAN' %}
+                        <span class="badge bg-success">MASUK</span>
+                    {% elif log.transaction_type == 'PENGELUARAN' %}
+                        <span class="badge bg-danger">KELUAR</span>
+                    {% elif log.transaction_type == 'PEMASANGAN' %}
+                        <span class="badge bg-warning text-dark">TERPASANG</span>
+                    {% endif %}
+                </td>
+                <td>{{ log.pic or '-' }}</td>
+                <td>{{ log.equipment_code or '-' }}</td>
+                <td>{{ log.notes or '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center">Belum ada transaksi yang tercatat.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

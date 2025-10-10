@@ -391,5 +391,19 @@ def pengeluaran_barang():
     # Bagian GET, hanya menampilkan halaman
     return render_template('pengeluaran.html')
 
+@app.route('/log_transaksi')
+def log_transaksi():
+    conn = get_db_connection()
+    if conn is None: return "Koneksi database gagal."
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM transaction_log ORDER BY timestamp DESC")
+    logs = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template('log_transaksi.html', logs=logs)
+
 if __name__ == '__main__':
     app.run(debug=True)
