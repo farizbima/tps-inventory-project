@@ -394,11 +394,14 @@ def pengeluaran_barang():
             # --- AKHIR LOGIKA PERBAIKAN ---
 
             # 2. Catat ke log transaksi menggunakan nama yang sudah benar
+            # Di dalam fungsi pengeluaran_barang
+
             log_query = """
-                INSERT INTO transaction_log (timestamp, serial_number, part_number, part_name, transaction_type, notes)
-                VALUES (%s, %s, %s, %s, 'PENGELUARAN', %s)
-            """
-            cursor.execute(log_query, (datetime.now(), serial_number, part['part_number'], part_name_to_log, notes))
+                INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, notes)
+                VALUES (%s, %s, %s, %s, %s, 'PENGELUARAN', %s)
+                """
+            # Perhatikan penambahan 'part_id' di query dan 'part['id']' di parameter
+            cursor.execute(log_query, (datetime.now(), part['id'], serial_number, part['part_number'], part_name_to_log, notes))
 
             # 3. Update status part menjadi 'used'
             update_query = "UPDATE parts SET status = 'used' WHERE serial_number = %s"
