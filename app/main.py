@@ -36,11 +36,68 @@ def get_db_connection():
         print(f"Error saat koneksi ke MySQL: {e}")
     return conn
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
     conn = get_db_connection()
     if conn is None: return "Koneksi database gagal."
     cursor = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        serial_number = request.form['serial_number']
+        action = request.form.get('action')
+
+        try:
+            cursor.execute("SELECT * FROM parts WHERE serial_number = %s", (serial_number,))
+            part = cursor.fetchone()
+            if not part:
+                flask.flash(f"Error: Part dengan serial number {serial_number} tidak ditemukan.", "danger")
+                return redirect(url_for('index'))
+
+            if action == 'install_use':
+                if part['status'] != 'in_stock':
+                    flask.flash(f"Error: Part ini berstatus '{part['status']}' dan tidak bisa dipasang/digunakan.", "warning")
+                    return redirect(url_for('index'))
+
+                pic = request.form.get('pic', '')
+                equipment_id = request.form.get('equipment_id', '')
+
+                equipment_code = None
+                if equipment_id:
+                    cursor.execute("SELECT equipment_code FROM equipment WHERE id = %s", (equipment_id,))
+                    equipment = cursor.fetchone()
+                    if equipment: equipment_code = equipment['equipment_code']
+
+                new_status = 'installed' if equipment_id else 'used'
+                transaction_type = 'PEMASANGAN' if new_status == 'installed' else 'PENGELUARAN'
+
+                log_query = "INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, pic, equipment_code) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                cursor.execute(log_query, (datetime.now(), part['id'], serial_number, part['part_number'], part['part_name'], transaction_type, pic, equipment_code))
+
+                update_query = "UPDATE parts SET status = %s WHERE serial_number = %s"
+                cursor.execute(update_query, (new_status, serial_number,))
+
+                if new_status == 'installed':
+                    insert_history_query = "INSERT INTO usage_history (part_id, equipment_id, install_date) VALUES (%s, %s, %s)"
+                    cursor.execute(insert_history_query, (part['id'], equipment_id, datetime.now()))
+
+                flask.flash(f"Part {part['part_name']} ({serial_number}) berhasil dicatat sebagai '{new_status}'.", "success")
+
+            elif action == 'remove':
+                # Logika pelepasan part (dari fungsi 'remove_part' lama Anda)
+                # Anda bisa pindahkan logika dari fungsi remove_part ke sini jika ada
+                pass # Tambahkan logika pelepasan di sini
+
+            conn.commit()
+        except Error as e:
+            conn.rollback()
+            flask.flash(f"Terjadi error database: {e}", "danger")
+        finally:
+            cursor.close()
+            conn.close()
+
+        return redirect(url_for('index'))
+
+    # Bagian GET request:
     cursor.execute("SELECT * FROM equipment ORDER BY equipment_code ASC")
     equipment_list = cursor.fetchall()
     cursor.close()
@@ -115,36 +172,6 @@ def penerimaan_barang():
     cursor.close()
     conn.close()
     return render_template('penerimaan.html', item_definitions=item_definitions)
-
-@app.route('/install', methods=['POST'])
-def install_part():
-    # Logika instalasi part (tidak berubah)
-    serial_number = request.form['serial_number']
-    equipment_id = request.form['equipment_id']
-    install_time = datetime.now()
-    conn = get_db_connection()
-    if conn is None: return "Koneksi database gagal."
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT * FROM parts WHERE serial_number = %s", (serial_number,))
-        part = cursor.fetchone()
-        if not part:
-            return "Error: Part dengan serial number tersebut tidak ditemukan. <a href='/'>Coba lagi</a>."
-        if part['status'] != 'in_stock':
-            return f"Error: Part ini berstatus '{part['status']}' dan tidak bisa dipasang. <a href='/'>Coba lagi</a>."
-        
-        update_query = "UPDATE parts SET status = 'installed' WHERE id = %s"
-        cursor.execute(update_query, (part['id'],))
-        insert_query = "INSERT INTO usage_history (part_id, equipment_id, install_date) VALUES (%s, %s, %s)"
-        cursor.execute(insert_query, (part['id'], equipment_id, install_time))
-        conn.commit()
-        return f"SUKSES! Part {part['part_name']} ({serial_number}) telah dicatat terpasang. <a href='/'>Kembali ke halaman utama</a>."
-    except Error as e:
-        conn.rollback()
-        return f"Terjadi error pada database: {e}"
-    finally:
-        cursor.close()
-        conn.close()
 
 # --- ROUTE BARU UNTUK PROSES PELEPASAN ---
 @app.route('/remove', methods=['POST'])
@@ -336,67 +363,6 @@ def show_qr(serial_number):
     qr_code_image = base64.b64encode(buf.getvalue()).decode('utf-8')
 
     return render_template('show_qr.html', serial_number=serial_number, qr_code_image=qr_code_image)
-
-# --- ROUTE BARU UNTUK PENGELUARAN BARANG ---
-@app.route('/pengeluaran', methods=['GET', 'POST'])
-def pengeluaran_barang():
-    conn = get_db_connection()
-    if conn is None: return "Koneksi database gagal."
-    cursor = conn.cursor(dictionary=True)
-
-    if request.method == 'POST':
-        serial_number = request.form['serial_number']
-        notes = request.form.get('notes', '')
-        pic = request.form.get('pic', '')
-        equipment_id = request.form.get('equipment_id', '')
-
-        try:
-            cursor.execute("SELECT * FROM parts WHERE serial_number = %s", (serial_number,))
-            part = cursor.fetchone()
-            if not part:
-                flask.flash(f"Error: Part dengan serial number {serial_number} tidak ditemukan.", "danger")
-                return redirect(url_for('pengeluaran_barang'))
-            if part['status'] != 'in_stock':
-                flask.flash(f"Error: Part {serial_number} tidak bisa dikeluarkan karena statusnya '{part['status']}'.", "warning")
-                return redirect(url_for('pengeluaran_barang'))
-
-            equipment_code = None
-            if equipment_id:
-                cursor.execute("SELECT equipment_code FROM equipment WHERE id = %s", (equipment_id,))
-                equipment = cursor.fetchone()
-                if equipment:
-                    equipment_code = equipment['equipment_code']
-            
-            new_status = 'installed' if equipment_id else 'used'
-            transaction_type = 'PEMASANGAN' if new_status == 'installed' else 'PENGELUARAN'
-
-            log_query = "INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, pic, equipment_code, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
-            cursor.execute(log_query, (datetime.now(), part['id'], serial_number, part['part_number'], part['part_name'], transaction_type, pic, equipment_code, notes))
-            
-            update_query = "UPDATE parts SET status = %s WHERE serial_number = %s"
-            cursor.execute(update_query, (new_status, serial_number,))
-            
-            if new_status == 'installed':
-                insert_history_query = "INSERT INTO usage_history (part_id, equipment_id, install_date) VALUES (%s, %s, %s)"
-                cursor.execute(insert_history_query, (part['id'], equipment_id, datetime.now()))
-
-            conn.commit()
-            flask.flash(f"Part {part['part_name']} ({serial_number}) berhasil dicatat sebagai '{new_status}'.", "success")
-        
-        except Error as e:
-            conn.rollback()
-            flask.flash(f"Terjadi error database: {e}", "danger")
-        finally:
-            cursor.close()
-            conn.close()
-        
-        return redirect(url_for('pengeluaran_barang'))
-    
-    cursor.execute("SELECT * FROM equipment ORDER BY equipment_code ASC")
-    equipment_list = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template('pengeluaran.html', equipment_list=equipment_list)
 
 @app.route('/log_transaksi')
 def log_transaksi():

@@ -1,53 +1,51 @@
 {% extends "base.html" %}
-
-{% block title %}Scan Part{% endblock %}
-
+{% block title %}Scan Pemasangan / Pelepasan{% endblock %}
 {% block content %}
     <h2 class="text-center">Scan Pemasangan / Pelepasan</h2>
-    
-    <div id="notification" class="alert d-none mt-3" role="alert"></div>
+    <p class="text-center">Gunakan halaman ini untuk semua aktivitas scan part.</p>
 
-    <div id="scanner-container" class="card my-4 d-none">
+    <div id="scanner-container" class="card my-4">
         <div class="card-body text-center">
             <div id="qr-reader" style="width:100%; max-width: 500px; margin: 0 auto;"></div>
-            </div>
+        </div>
     </div>
-    
+
     <div class="row">
         <div class="col-md-6">
-            <div class="card p-4 h-100">
-                <h4>Pasang Part Baru</h4>
-                <form id="install-form" action="/install" method="POST">
+            <div class="card p-4">
+                <h4>Pemasangan / Pengeluaran (Scan In)</h4>
+                <form action="{{ url_for('index') }}" method="POST">
                     <div class="mb-3">
-                        <label for="serial_number_install" class="form-label">Serial Number Part</label>
-                        <input type="text" class="form-control" id="serial_number_install" name="serial_number" required placeholder="Ketik manual atau scan QR">
+                        <label for="serial_number_install" class="form-label">Serial Number (dari scan)</label>
+                        <input type="text" class="form-control" id="serial_number_install" name="serial_number" required readonly>
                     </div>
-                    <button type="button" class="btn btn-primary w-100 mb-3" onclick="startScanner('install')">Gunakan Scan untuk Pasang</button>
-                    
+                     <div class="mb-3">
+                        <label for="pic" class="form-label">PIC (Person in Charge)</label>
+                        <input type="text" class="form-control" id="pic" name="pic" required>
+                    </div>
                     <div class="mb-3">
-                        <label for="equipment_id" class="form-label">Dipasang pada Equipment</label>
-                        <select class="form-select" id="equipment_id" name="equipment_id" required>
-                            <option value="" disabled selected>-- Pilih Equipment --</option>
+                        <label for="equipment_id" class="form-label">Dipasang ke Equipment</label>
+                        <select class="form-select" name="equipment_id">
+                            <option value="">-- Pilih Jika Dipasang ke Alat --</option>
                             {% for eq in equipment_list %}
-                            <option value="{{ eq.id }}">{{ eq.equipment_code }} ({{ eq.equipment_type }})</option>
+                                <option value="{{ eq.id }}">{{ eq.equipment_code }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-success w-100">Catat Pemasangan</button>
+                    <button type="submit" name="action" value="install_use" class="btn btn-success w-100">Catat Pemasangan / Penggunaan</button>
                 </form>
             </div>
         </div>
 
         <div class="col-md-6">
-            <div class="card p-4 h-100">
-                <h4>Lepas Part</h4>
-                <form id="remove-form" action="/remove" method="POST">
+            <div class="card p-4">
+                <h4>Pelepasan Part (Scan Out)</h4>
+                <form action="{{ url_for('index') }}" method="POST">
                     <div class="mb-3">
-                        <label for="serial_number_remove" class="form-label">Serial Number Part</label>
-                        <input type="text" class="form-control" id="serial_number_remove" name="serial_number" required placeholder="Ketik manual atau scan QR">
+                        <label for="serial_number_remove" class="form-label">Serial Number (dari scan)</label>
+                        <input type="text" class="form-control" id="serial_number_remove" name="serial_number" required readonly>
                     </div>
-                    <button type="button" class="btn btn-primary w-100 mb-3" onclick="startScanner('remove')">Gunakan Scan untuk Lepas</button>
-                    <button type="submit" class="btn btn-danger w-100">Catat Pelepasan</button>
+                    <button type="submit" name="action" value="remove" class="btn btn-danger w-100">Catat Pelepasan</button>
                 </form>
             </div>
         </div>
@@ -56,35 +54,14 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const scannerContainer = document.getElementById('scanner-container');
             const html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
-
-            window.showNotification = function(message, type) {
-                const notificationDiv = document.getElementById('notification');
-                notificationDiv.className = `alert alert-${type} alert-dismissible fade show`;
-                notificationDiv.textContent = message;
-                notificationDiv.classList.remove('d-none');
+            function onScanSuccess(decodedText, decodedResult) {
+                // Coba isi kedua form, salah satu akan berhasil
+                document.getElementById('serial_number_install').value = decodedText;
+                document.getElementById('serial_number_remove').value = decodedText;
+                alert(`Part ${decodedText} berhasil dipindai!`);
             }
-
-            window.startScanner = function(mode) {
-                scannerContainer.classList.remove('d-none');
-                
-                const onScanSuccess = (decodedText, decodedResult) => {
-                    if (mode === 'install') {
-                        document.getElementById('serial_number_install').value = decodedText;
-                        showNotification(`Part untuk dipasang berhasil dipindai: ${decodedText}!`, 'success');
-                    } else if (mode === 'remove') {
-                        document.getElementById('serial_number_remove').value = decodedText;
-                        showNotification(`Part untuk dilepas berhasil dipindai: ${decodedText}!`, 'info');
-                    }
-                    // Setelah berhasil, panggil clear() untuk menghentikan scanner
-                    html5QrcodeScanner.clear().catch(error => {
-                        console.error("Gagal membersihkan scanner setelah sukses.", error);
-                    });
-                    scannerContainer.classList.add('d-none');
-                };
-                html5QrcodeScanner.render(onScanSuccess, () => {});
-            }
+            html5QrcodeScanner.render(onScanSuccess, () => {});
         });
     </script>
 {% endblock %}
