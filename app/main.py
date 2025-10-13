@@ -43,16 +43,29 @@ def index():
     cursor = conn.cursor(dictionary=True)
 
     if request.method == 'POST':
-        serial_number = request.form['serial_number']
+        # --- PERBAIKAN DIMULAI DI SINI ---
+        # 1. Ambil serial number dan bersihkan dari spasi di awal/akhir
+        serial_number = request.form.get('serial_number', '').strip()
+        
+        # 2. Kode untuk debugging (akan muncul di Server Log)
+        print(f"--- DEBUG: Menerima Serial Number: '[{serial_number}]' ---")
+        # --- AKHIR PERBAIKAN ---
+
         action = request.form.get('action')
         
         try:
+            # Pengecekan serial number tidak boleh kosong setelah dibersihkan
+            if not serial_number:
+                flask.flash("Error: Serial number tidak boleh kosong.", "danger")
+                return redirect(url_for('index'))
+
             cursor.execute("SELECT * FROM parts WHERE serial_number = %s", (serial_number,))
             part = cursor.fetchone()
             if not part:
-                flask.flash(f"Error: Part dengan serial number {serial_number} tidak ditemukan.", "danger")
+                flask.flash(f"Error: Part dengan serial number '{serial_number}' tidak ditemukan.", "danger")
                 return redirect(url_for('index'))
 
+            # Sisa logika tidak berubah...
             if action == 'install':
                 if part['status'] != 'dispatched':
                     flask.flash(f"Error: Part ini tidak bisa dipasang karena statusnya '{part['status']}' (seharusnya 'dispatched').", "warning")
@@ -92,7 +105,7 @@ def index():
             conn.close()
         return redirect(url_for('index'))
 
-    # Bagian GET
+    # Bagian GET (tidak berubah)
     cursor.execute("SELECT * FROM equipment ORDER BY equipment_code ASC")
     equipment_list = cursor.fetchall()
     cursor.close()
