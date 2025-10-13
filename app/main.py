@@ -43,18 +43,10 @@ def index():
     cursor = conn.cursor(dictionary=True)
 
     if request.method == 'POST':
-        # --- PERBAIKAN DIMULAI DI SINI ---
-        # 1. Ambil serial number dan bersihkan dari spasi di awal/akhir
         serial_number = request.form.get('serial_number', '').strip()
-        
-        # 2. Kode untuk debugging (akan muncul di Server Log)
-        print(f"--- DEBUG: Menerima Serial Number: '[{serial_number}]' ---")
-        # --- AKHIR PERBAIKAN ---
-
         action = request.form.get('action')
         
         try:
-            # Pengecekan serial number tidak boleh kosong setelah dibersihkan
             if not serial_number:
                 flask.flash("Error: Serial number tidak boleh kosong.", "danger")
                 return redirect(url_for('index'))
@@ -65,36 +57,51 @@ def index():
                 flask.flash(f"Error: Part dengan serial number '{serial_number}' tidak ditemukan.", "danger")
                 return redirect(url_for('index'))
 
-            # Sisa logika tidak berubah...
             if action == 'install':
                 if part['status'] != 'dispatched':
                     flask.flash(f"Error: Part ini tidak bisa dipasang karena statusnya '{part['status']}' (seharusnya 'dispatched').", "warning")
                     return redirect(url_for('index'))
                 
+                pic = request.form.get('pic', '') # Ambil PIC dari form
                 equipment_id = request.form.get('equipment_id')
-                if not equipment_id:
-                    flask.flash("Error: Untuk mencatat pemasangan, Anda wajib memilih equipment.", "danger")
+                if not equipment_id or not pic:
+                    flask.flash("Error: Untuk mencatat pemasangan, PIC dan Equipment wajib diisi.", "danger")
                     return redirect(url_for('index'))
 
                 cursor.execute("SELECT equipment_code FROM equipment WHERE id = %s", (equipment_id,))
                 equipment = cursor.fetchone()
                 equipment_code = equipment['equipment_code'] if equipment else ''
                 
+                # Update status dan catat riwayat
                 cursor.execute("UPDATE parts SET status = 'installed' WHERE id = %s", (part['id'],))
                 cursor.execute("INSERT INTO usage_history (part_id, equipment_id, install_date) VALUES (%s, %s, %s)", (part['id'], equipment_id, datetime.now()))
-                cursor.execute("INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, equipment_code) VALUES (%s, %s, %s, %s, %s, 'PEMASANGAN', %s)", (datetime.now(), part['id'], serial_number, part['part_number'], part['part_name'], equipment_code))
-                flask.flash(f"Part {part['part_name']} berhasil dicatat TERPASANG di {equipment_code}.", "success")
+                
+                # Catat ke log transaksi (dengan PIC)
+                log_query = "INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, pic, equipment_code) VALUES (%s, %s, %s, %s, %s, 'PEMASANGAN', %s, %s)"
+                cursor.execute(log_query, (datetime.now(), part['id'], serial_number, part['part_number'], part['part_name'], pic, equipment_code))
+                
+                flask.flash(f"Part {part['part_name']} berhasil dicatat TERPASANG di {equipment_code} oleh {pic}.", "success")
 
             elif action == 'remove':
                 if part['status'] != 'installed':
                     flask.flash(f"Error: Part ini tidak bisa dilepas karena statusnya '{part['status']}' (seharusnya 'installed').", "warning")
                     return redirect(url_for('index'))
 
+                pic = request.form.get('pic', '') # Ambil PIC dari form
                 notes = request.form.get('notes', '')
+                if not pic:
+                    flask.flash("Error: PIC wajib diisi saat pelepasan part.", "danger")
+                    return redirect(url_for('index'))
+                
+                # Update status dan catat riwayat
                 cursor.execute("UPDATE parts SET status = 'disposed' WHERE id = %s", (part['id'],))
                 cursor.execute("UPDATE usage_history SET removal_date = %s WHERE part_id = %s AND removal_date IS NULL", (datetime.now(), part['id']))
-                cursor.execute("INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, notes) VALUES (%s, %s, %s, %s, %s, 'PELEPASAN', %s)", (datetime.now(), part['id'], serial_number, part['part_number'], part['part_name'], notes))
-                flask.flash(f"Part {part['part_name']} berhasil dicatat DILEPAS.", "success")
+                
+                # Catat ke log transaksi (dengan PIC)
+                log_query = "INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, pic, notes) VALUES (%s, %s, %s, %s, %s, 'PELEPASAN', %s, %s)"
+                cursor.execute(log_query, (datetime.now(), part['id'], serial_number, part['part_number'], part['part_name'], pic, notes))
+
+                flask.flash(f"Part {part['part_name']} berhasil dicatat DILEPAS oleh {pic}.", "success")
             
             conn.commit()
         except Error as e:

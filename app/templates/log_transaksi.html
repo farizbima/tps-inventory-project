@@ -25,9 +25,11 @@
                     {% if log.transaction_type == 'PENERIMAAN' %}
                         <span class="badge bg-success">MASUK</span>
                     {% elif log.transaction_type == 'PENGELUARAN' %}
-                        <span class="badge bg-danger">KELUAR</span>
+                        <span class="badge bg-warning text-dark">KELUAR</span>
                     {% elif log.transaction_type == 'PEMASANGAN' %}
-                        <span class="badge bg-warning text-dark">TERPASANG</span>
+                        <span class="badge bg-info">TERPASANG</span>
+                    {% elif log.transaction_type == 'PELEPASAN' %}
+                        <span class="badge bg-secondary">DILEPAS</span>
                     {% endif %}
                 </td>
                 <td>{{ log.pic or '-' }}</td>
