@@ -20,6 +20,12 @@
                     <a class="nav-link" href="{{ url_for('penerimaan_barang') }}">Penerimaan Barang</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('pengeluaran_barang') }}">Pengeluaran Barang</a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}">Pemasangan/Pelepasan</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('inventory') }}">Cek Inventaris</a>
                 </li>
                 <li class="nav-item">
@@ -27,15 +33,6 @@
                 </li>
                  <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-                </li>
-                <li class="nav-item dropdown">
-                  <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    Riwayat Part dan Scan
-                  </a>
-                  <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                    <li><a class="dropdown-item" href="{{ url_for('index') }}">Scan Pemasangan/Pelepasan</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('history') }}">Riwayat Part</a></li>
-                  </ul>
                 </li>
             </ul>
         </div>
