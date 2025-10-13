@@ -58,11 +58,12 @@ def index():
                 return redirect(url_for('index'))
 
             if action == 'install':
+                # ... (logika 'install' tidak berubah)
                 if part['status'] != 'dispatched':
                     flask.flash(f"Error: Part ini tidak bisa dipasang karena statusnya '{part['status']}' (seharusnya 'dispatched').", "warning")
                     return redirect(url_for('index'))
                 
-                pic = request.form.get('pic', '') # Ambil PIC dari form
+                pic = request.form.get('pic', '')
                 equipment_id = request.form.get('equipment_id')
                 if not equipment_id or not pic:
                     flask.flash("Error: Untuk mencatat pemasangan, PIC dan Equipment wajib diisi.", "danger")
@@ -72,32 +73,30 @@ def index():
                 equipment = cursor.fetchone()
                 equipment_code = equipment['equipment_code'] if equipment else ''
                 
-                # Update status dan catat riwayat
                 cursor.execute("UPDATE parts SET status = 'installed' WHERE id = %s", (part['id'],))
                 cursor.execute("INSERT INTO usage_history (part_id, equipment_id, install_date) VALUES (%s, %s, %s)", (part['id'], equipment_id, datetime.now()))
-                
-                # Catat ke log transaksi (dengan PIC)
                 log_query = "INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, pic, equipment_code) VALUES (%s, %s, %s, %s, %s, 'PEMASANGAN', %s, %s)"
                 cursor.execute(log_query, (datetime.now(), part['id'], serial_number, part['part_number'], part['part_name'], pic, equipment_code))
-                
                 flask.flash(f"Part {part['part_name']} berhasil dicatat TERPASANG di {equipment_code} oleh {pic}.", "success")
 
             elif action == 'remove':
+                # ===== INI LOGIKA YANG DIPERBARUI & DILENGKAPI =====
                 if part['status'] != 'installed':
                     flask.flash(f"Error: Part ini tidak bisa dilepas karena statusnya '{part['status']}' (seharusnya 'installed').", "warning")
                     return redirect(url_for('index'))
 
-                pic = request.form.get('pic', '') # Ambil PIC dari form
+                pic = request.form.get('pic', '')
                 notes = request.form.get('notes', '')
                 if not pic:
                     flask.flash("Error: PIC wajib diisi saat pelepasan part.", "danger")
                     return redirect(url_for('index'))
                 
-                # Update status dan catat riwayat
+                # Update status part menjadi 'disposed' (dibuang/selesai pakai)
                 cursor.execute("UPDATE parts SET status = 'disposed' WHERE id = %s", (part['id'],))
+                # Update catatan riwayat pemasangan dengan tanggal pelepasan
                 cursor.execute("UPDATE usage_history SET removal_date = %s WHERE part_id = %s AND removal_date IS NULL", (datetime.now(), part['id']))
                 
-                # Catat ke log transaksi (dengan PIC)
+                # Catat ke log transaksi sebagai 'PELEPASAN'
                 log_query = "INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, pic, notes) VALUES (%s, %s, %s, %s, %s, 'PELEPASAN', %s, %s)"
                 cursor.execute(log_query, (datetime.now(), part['id'], serial_number, part['part_number'], part['part_name'], pic, notes))
 
