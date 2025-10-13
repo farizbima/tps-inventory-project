@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Form Penerimaan Barang{% endblock %}
 {% block content %}
-    <h2 class="text-center">Form Penerimaan Barang</h2>
-
+    <h2 class="text-center">Form Penerimaan Barang (Goods Receipt)</h2>
+    
     <div class="form-check form-switch my-4">
         <input class="form-check-input" type="checkbox" role="switch" id="isNewItemSwitch">
         <label class="form-check-label" for="isNewItemSwitch">Input sebagai Jenis Barang Baru?</label>
@@ -13,15 +13,16 @@
         <form method="POST" action="/penerimaan" class="card p-4 mt-4">
             <input type="hidden" name="form_type" value="existing">
             <div class="mb-3">
+                <label for="pic_existing" class="form-label">PIC Penerima</label>
+                <input type="text" class="form-control" name="pic" id="pic_existing" required>
+            </div>
+            <div class="mb-3">
                 <label for="part_number_existing" class="form-label">Pilih Barang</label>
                 <select class="form-select" name="part_number_existing" required>
                     <option value="" disabled selected>-- Pilih Jenis Barang --</option>
                     {% for item in item_definitions %}
                         <option value="{{ item.part_number }}">{{ item.part_name }} ({{ item.part_number }})</option>
                     {% endfor %}
-            <div class="mb-3">
-                <label for="pic" class="form-label">PIC Penerima</label>
-                <input type="text" class="form-control" name="pic" required>
                 </select>
             </div>
             <div class="mb-3">
@@ -36,6 +37,10 @@
         <p>Gunakan form ini jika jenis barang belum pernah terdaftar sebelumnya.</p>
         <form method="POST" action="/penerimaan" class="card p-4 mt-4">
             <input type="hidden" name="form_type" value="new">
+            <div class="mb-3">
+                <label for="pic_new" class="form-label">PIC Penerima</label>
+                <input type="text" class="form-control" name="pic" id="pic_new" required>
+            </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="part_number" class="form-label">Part Number (Baru)</label>
