@@ -16,8 +16,8 @@
                 <h4>Pemasangan / Pengeluaran (Scan In)</h4>
                 <form action="{{ url_for('index') }}" method="POST">
                     <div class="mb-3">
-                        <label for="serial_number_install" class="form-label">Serial Number (dari scan)</label>
-                        <input type="text" class="form-control" id="serial_number_install" name="serial_number" required readonly>
+                        <label for="serial_number_install" class="form-label">Serial Number</label>
+                        <input type="text" class="form-control" id="serial_number_install" name="serial_number" required placeholder="Ketik manual atau scan QR">
                     </div>
                      <div class="mb-3">
                         <label for="pic" class="form-label">PIC (Person in Charge)</label>
