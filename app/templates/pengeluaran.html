@@ -1,56 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Form Pengeluaran Barang{% endblock %}
 {% block content %}
-    <h2 class="text-center">Form Pengeluaran Barang</h2>
-    <p class="text-center">Scan QR Code pada barang yang akan dikeluarkan dari gudang.</p>
-
-    <div id="scanner-container" class="card my-4">
-        <div class="card-body text-center">
-            <div id="qr-reader" style="width:100%; max-width: 500px; margin: 0 auto;"></div>
-        </div>
-    </div>
-
-    <form method="POST" action="/pengeluaran" class="card p-4 mt-4">
-        <div class="mb-3">
-            <label for="serial_number" class="form-label">Serial Number</label>
-            <input type="text" class="form-control" id="serial_number" name="serial_number" required placeholder="Ketik manual atau scan QR">
-        </div>
-
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="pic" class="form-label">PIC (Person in Charge)</label>
-                <input type="text" class="form-control" id="pic" name="pic" required>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="equipment_id" class="form-label">Dipasang ke Equipment (jika ada)</label>
-                <select class="form-select" id="equipment_id" name="equipment_id">
-                    <option value="">-- Hanya Keluar Gudang (Tidak Dipasang) --</option>
-                    {% for eq in equipment_list %}
-                        <option value="{{ eq.id }}">{{ eq.equipment_code }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-
-        <div class="mb-3">
-            <label for="notes" class="form-label">Keterangan (Opsional)</label>
-            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
-        </div>
-        <button type="submit" class="btn btn-danger">Keluarkan Barang dari Stok</button>
+    <h2 class="text-center">Form Pengeluaran Barang (Dari Gudang)</h2>
+    <p class="text-center">Scan QR Code untuk mengambil part dari gudang.</p>
+    <div id="scanner-container" class="card my-4">...</div> <form method="POST" action="/pengeluaran" class="card p-4 mt-4">
+        <div class="mb-3">... (Input Serial Number) ...</div>
+        <div class="mb-3">... (Input PIC) ...</div>
+        <div class="mb-3">... (Input Notes) ...</div>
+        <button type="submit" class="btn btn-warning">Keluarkan dari Gudang</button>
     </form>
-
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
-
-            function onScanSuccess(decodedText, decodedResult) {
-                document.getElementById('serial_number').value = decodedText;
-                alert(`Part ${decodedText} berhasil dipindai!`);
-                html5QrcodeScanner.clear();
-                document.getElementById('scanner-container').style.display = 'none';
-            }
-            html5QrcodeScanner.render(onScanSuccess, () => {});
-        });
-    </script>
-{% endblock %}
+    {% endblock %}

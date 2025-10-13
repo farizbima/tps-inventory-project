@@ -1,67 +1,29 @@
 {% extends "base.html" %}
 {% block title %}Scan Pemasangan / Pelepasan{% endblock %}
 {% block content %}
-    <h2 class="text-center">Scan Pemasangan / Pelepasan</h2>
-    <p class="text-center">Gunakan halaman ini untuk semua aktivitas scan part.</p>
-
-    <div id="scanner-container" class="card my-4">
-        <div class="card-body text-center">
-            <div id="qr-reader" style="width:100%; max-width: 500px; margin: 0 auto;"></div>
-        </div>
-    </div>
-
-    <div class="row">
+    <h2 class="text-center">Pemasangan & Pelepasan Part (Di Lapangan)</h2>
+    <div id="scanner-container" class="card my-4">...</div> <div class="row">
         <div class="col-md-6">
             <div class="card p-4">
-                <h4>Pemasangan / Pengeluaran (Scan In)</h4>
+                <h4>Pemasangan Part</h4>
                 <form action="{{ url_for('index') }}" method="POST">
-                    <div class="mb-3">
-                        <label for="serial_number_install" class="form-label">Serial Number</label>
-                        <input type="text" class="form-control" id="serial_number_install" name="serial_number" required placeholder="Ketik manual atau scan QR">
-                    </div>
-                     <div class="mb-3">
-                        <label for="pic" class="form-label">PIC (Person in Charge)</label>
-                        <input type="text" class="form-control" id="pic" name="pic" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="equipment_id" class="form-label">Dipasang ke Equipment</label>
-                        <select class="form-select" name="equipment_id">
-                            <option value="">-- Pilih Jika Dipasang ke Alat --</option>
-                            {% for eq in equipment_list %}
-                                <option value="{{ eq.id }}">{{ eq.equipment_code }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button type="submit" name="action" value="install_use" class="btn btn-success w-100">Catat Pemasangan / Penggunaan</button>
+                    <input type="hidden" name="action" value="install">
+                    <div class="mb-3">... (Input Serial Number) ...</div>
+                    <div class="mb-3">... (Dropdown Equipment) ...</div>
+                    <button type="submit" class="btn btn-success w-100">Catat Pemasangan</button>
                 </form>
             </div>
         </div>
-
         <div class="col-md-6">
             <div class="card p-4">
-                <h4>Pelepasan Part (Scan Out)</h4>
+                <h4>Pelepasan Part</h4>
                 <form action="{{ url_for('index') }}" method="POST">
-                    <div class="mb-3">
-                        <label for="serial_number_remove" class="form-label">Serial Number (dari scan)</label>
-                        <input type="text" class="form-control" id="serial_number_remove" name="serial_number" required placeholder="Ketik manual atau scan QR">
-                    </div>
-                    <button type="submit" name="action" value="remove" class="btn btn-danger w-100">Catat Pelepasan</button>
+                    <input type="hidden" name="action" value="remove">
+                    <div class="mb-3">... (Input Serial Number) ...</div>
+                    <div class="mb-3">... (Input Notes) ...</div>
+                    <button type="submit" class="btn btn-danger w-100">Catat Pelepasan</button>
                 </form>
             </div>
         </div>
     </div>
-
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
-            function onScanSuccess(decodedText, decodedResult) {
-                // Coba isi kedua form, salah satu akan berhasil
-                document.getElementById('serial_number_install').value = decodedText;
-                document.getElementById('serial_number_remove').value = decodedText;
-                alert(`Part ${decodedText} berhasil dipindai!`);
-            }
-            html5QrcodeScanner.render(onScanSuccess, () => {});
-        });
-    </script>
-{% endblock %}
+    {% endblock %}
