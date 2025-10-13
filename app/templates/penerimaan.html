@@ -19,6 +19,9 @@
                     {% for item in item_definitions %}
                         <option value="{{ item.part_number }}">{{ item.part_name }} ({{ item.part_number }})</option>
                     {% endfor %}
+            <div class="mb-3">
+                <label for="pic" class="form-label">PIC Penerima</label>
+                <input type="text" class="form-control" name="pic" required>
                 </select>
             </div>
             <div class="mb-3">

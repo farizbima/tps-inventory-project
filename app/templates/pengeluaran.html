@@ -13,8 +13,25 @@
     <form method="POST" action="/pengeluaran" class="card p-4 mt-4">
         <div class="mb-3">
             <label for="serial_number" class="form-label">Serial Number (terisi otomatis oleh scan)</label>
-            <input type="text" class="form-control" id="serial_number" name="serial_number" required placeholder="Ketik manual atau scan QR">
+            <input type="text" class="form-control" id="serial_number" name="serial_number" required readonly>
         </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="pic" class="form-label">PIC (Person in Charge)</label>
+                <input type="text" class="form-control" id="pic" name="pic" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="equipment_id" class="form-label">Dipasang ke Equipment (jika ada)</label>
+                <select class="form-select" id="equipment_id" name="equipment_id">
+                    <option value="">-- Hanya Keluar Gudang (Tidak Dipasang) --</option>
+                    {% for eq in equipment_list %}
+                        <option value="{{ eq.id }}">{{ eq.equipment_code }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
         <div class="mb-3">
             <label for="notes" class="form-label">Keterangan (Opsional)</label>
             <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>

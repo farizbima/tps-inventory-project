@@ -103,11 +103,12 @@ def penerimaan_barang():
                 
                 # Catat ke log transaksi
                 last_id = cursor.lastrowid 
+                # Di dalam fungsi penerimaan_barang, di dalam for loop
                 log_query = """
-                    INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type)
-                    VALUES (%s, %s, %s, %s, %s, 'PENERIMAAN')
-                """
-                cursor.execute(log_query, (receipt_date, last_id, serial_number, part_number, part_name))
+                    INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, pic)
+                    VALUES (%s, %s, %s, %s, %s, 'PENERIMAAN', %s)
+                    """
+                cursor.execute(log_query, (receipt_date, last_id, serial_number, part_number, part_name, pic))
                 
                 # Buat gambar QR untuk ditampilkan
                 img = qrcode.make(serial_number)
@@ -361,16 +362,18 @@ def show_qr(serial_number):
 # --- ROUTE BARU UNTUK PENGELUARAN BARANG ---
 @app.route('/pengeluaran', methods=['GET', 'POST'])
 def pengeluaran_barang():
+    conn = get_db_connection()
+    if conn is None: return "Koneksi database gagal."
+    cursor = conn.cursor(dictionary=True)
+
     if request.method == 'POST':
         serial_number = request.form['serial_number']
         notes = request.form.get('notes', '')
-
-        conn = get_db_connection()
-        if conn is None: return "Koneksi database gagal."
-        cursor = conn.cursor(dictionary=True)
+        pic = request.form.get('pic', '') # Ambil PIC
+        equipment_id = request.form.get('equipment_id', '') # Ambil Equipment ID
 
         try:
-            # 1. Cek status part dari tabel 'parts'
+            # Cek status part
             cursor.execute("SELECT * FROM parts WHERE serial_number = %s", (serial_number,))
             part = cursor.fetchone()
             if not part:
@@ -380,35 +383,34 @@ def pengeluaran_barang():
                 flask.flash(f"Error: Part {serial_number} tidak bisa dikeluarkan karena statusnya '{part['status']}'.", "warning")
                 return redirect(url_for('pengeluaran_barang'))
 
-            # --- INI ADALAH LOGIKA PERBAIKAN ---
-            # Ambil part_name dari record 'part'
-            part_name_to_log = part['part_name']
+            # Dapatkan equipment_code dari equipment_id
+            equipment_code = None
+            if equipment_id:
+                cursor.execute("SELECT equipment_code FROM equipment WHERE id = %s", (equipment_id,))
+                equipment = cursor.fetchone()
+                if equipment:
+                    equipment_code = equipment['equipment_code']
 
-            # Jika part_name di tabel 'parts' ternyata NULL (data lama),
-            # cari nama yang benar di tabel 'item_definitions'
-            if not part_name_to_log:
-                cursor.execute("SELECT part_name FROM item_definitions WHERE part_number = %s", (part['part_number'],))
-                item_def = cursor.fetchone()
-                if item_def:
-                    part_name_to_log = item_def['part_name']
-            # --- AKHIR LOGIKA PERBAIKAN ---
-
-            # 2. Catat ke log transaksi menggunakan nama yang sudah benar
-            # Di dalam fungsi pengeluaran_barang
-
+            # Catat ke log transaksi
             log_query = """
-                INSERT INTO transaction_log (timestamp, part_id, serial_number, part_number, part_name, transaction_type, notes)
-                VALUES (%s, %s, %s, %s, %s, 'PENGELUARAN', %s)
-                """
-            # Perhatikan penambahan 'part_id' di query dan 'part['id']' di parameter
-            cursor.execute(log_query, (datetime.now(), part['id'], serial_number, part['part_number'], part_name_to_log, notes))
+                INSERT INTO transaction_log 
+                (timestamp, part_id, serial_number, part_number, part_name, transaction_type, pic, equipment_code, notes)
+                VALUES (%s, %s, %s, %s, %s, 'PENGELUARAN', %s, %s, %s)
+            """
+            cursor.execute(log_query, (datetime.now(), part['id'], serial_number, part['part_number'], part['part_name'], pic, equipment_code, notes))
 
-            # 3. Update status part menjadi 'used'
-            update_query = "UPDATE parts SET status = 'used' WHERE serial_number = %s"
-            cursor.execute(update_query, (serial_number,))
+            # Update status menjadi 'used' atau 'installed' tergantung apakah equipment dipilih
+            new_status = 'installed' if equipment_id else 'used'
+            update_query = "UPDATE parts SET status = %s WHERE serial_number = %s"
+            cursor.execute(update_query, (new_status, serial_number,))
+
+            # Jika dipasang ke equipment, catat juga ke usage_history
+            if new_status == 'installed':
+                insert_history_query = "INSERT INTO usage_history (part_id, equipment_id, install_date) VALUES (%s, %s, %s)"
+                cursor.execute(insert_history_query, (part['id'], equipment_id, datetime.now()))
 
             conn.commit()
-            flask.flash(f"Part {part_name_to_log} ({serial_number}) berhasil dikeluarkan dari stok.", "success")
+            flask.flash(f"Part {part['part_name']} ({serial_number}) berhasil dikeluarkan dari stok.", "success")
 
         except Error as e:
             conn.rollback()
@@ -419,8 +421,12 @@ def pengeluaran_barang():
 
         return redirect(url_for('pengeluaran_barang'))
 
-    # Bagian GET (menampilkan form scan)
-    return render_template('pengeluaran.html')
+    # Bagian GET: Ambil daftar equipment untuk dropdown
+    cursor.execute("SELECT * FROM equipment ORDER BY equipment_code ASC")
+    equipment_list = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template('pengeluaran.html', equipment_list=equipment_list)
 
 @app.route('/log_transaksi')
 def log_transaksi():
