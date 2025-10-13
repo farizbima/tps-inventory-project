@@ -370,7 +370,7 @@ def pengeluaran_barang():
         cursor = conn.cursor(dictionary=True)
 
         try:
-            # Cek dulu status part
+            # 1. Cek status part dari tabel 'parts'
             cursor.execute("SELECT * FROM parts WHERE serial_number = %s", (serial_number,))
             part = cursor.fetchone()
             if not part:
@@ -379,19 +379,33 @@ def pengeluaran_barang():
             if part['status'] != 'in_stock':
                 flask.flash(f"Error: Part {serial_number} tidak bisa dikeluarkan karena statusnya '{part['status']}'.", "warning")
                 return redirect(url_for('pengeluaran_barang'))
-            
-            # Setelah validasi, sebelum UPDATE
-            log_query = """
-            INSERT INTO transaction_log (timestamp, part_id, serial_number, transaction_type, quantity, notes)
-            VALUES (%s, %s, %s, 'PENGELUARAN', -1, %s)
-            """
-            cursor.execute(log_query, (datetime.now(), part['id'], serial_number, notes))
 
-            # Update status menjadi 'used'
+            # --- INI ADALAH LOGIKA PERBAIKAN ---
+            # Ambil part_name dari record 'part'
+            part_name_to_log = part['part_name']
+
+            # Jika part_name di tabel 'parts' ternyata NULL (data lama),
+            # cari nama yang benar di tabel 'item_definitions'
+            if not part_name_to_log:
+                cursor.execute("SELECT part_name FROM item_definitions WHERE part_number = %s", (part['part_number'],))
+                item_def = cursor.fetchone()
+                if item_def:
+                    part_name_to_log = item_def['part_name']
+            # --- AKHIR LOGIKA PERBAIKAN ---
+
+            # 2. Catat ke log transaksi menggunakan nama yang sudah benar
+            log_query = """
+                INSERT INTO transaction_log (timestamp, serial_number, part_number, part_name, transaction_type, notes)
+                VALUES (%s, %s, %s, %s, 'PENGELUARAN', %s)
+            """
+            cursor.execute(log_query, (datetime.now(), serial_number, part['part_number'], part_name_to_log, notes))
+
+            # 3. Update status part menjadi 'used'
             update_query = "UPDATE parts SET status = 'used' WHERE serial_number = %s"
             cursor.execute(update_query, (serial_number,))
+
             conn.commit()
-            flask.flash(f"Part {part['part_name']} ({serial_number}) berhasil dikeluarkan dari stok.", "success")
+            flask.flash(f"Part {part_name_to_log} ({serial_number}) berhasil dikeluarkan dari stok.", "success")
 
         except Error as e:
             conn.rollback()
@@ -402,7 +416,7 @@ def pengeluaran_barang():
 
         return redirect(url_for('pengeluaran_barang'))
 
-    # Bagian GET, hanya menampilkan halaman
+    # Bagian GET (menampilkan form scan)
     return render_template('pengeluaran.html')
 
 @app.route('/log_transaksi')
